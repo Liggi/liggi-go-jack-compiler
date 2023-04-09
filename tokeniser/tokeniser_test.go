@@ -1,7 +1,6 @@
 package tokeniser
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 
@@ -14,8 +13,8 @@ func testTokeniser(t *testing.T, input string, expected []Token) {
 	tokens, _ := tokeniser.Tokenise()
 
 	for i, token := range tokens {
-		if !reflect.DeepEqual(token, expected[i]) {
-			diff := cmp.Diff(expected[i], token)
+		diff := cmp.Diff(expected[i], token)
+		if diff != "" {
 			t.Errorf("Token at index %d did not match expected Value:\n%s", i, diff)
 		}
 	}

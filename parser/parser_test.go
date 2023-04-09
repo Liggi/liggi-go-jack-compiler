@@ -1,590 +1,3937 @@
 package parser
 
 import (
-	"reflect"
+	"fmt"
+	"liggi-go-jack-compiler/token"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
 
+func element(tag string, elements ...Node) *token.Element {
+	return &token.Element{
+		Tag:      tag,
+		Children: elements,
+	}
+}
+
+func tk(tokenType, value string) *Token {
+	return &Token{
+		TokenType: tokenType,
+		Value:     value,
+	}
+}
+
+func keyword(value string) *Token {
+	return tk("keyword", value)
+}
+
+func identifier(value string) *Token {
+	return tk("identifier", value)
+}
+
+func symbol(value rune) *Token {
+	return tk("symbol", string(value))
+}
+
+func class(elements ...Node) *token.Element {
+	return element("class", elements...)
+}
+
+func subroutineDec(elements ...Node) *token.Element {
+	return element("subroutineDec", elements...)
+}
+
+func parameterList(elements ...Node) *token.Element {
+	return element("parameterList", elements...)
+}
+
+func subroutineBody(elements ...Node) *token.Element {
+	return element("subroutineBody", elements...)
+}
+
+func varDec(elements ...Node) *token.Element {
+	return element("varDec", elements...)
+}
+
+func statements(elements ...Node) *token.Element {
+	return element("statements", elements...)
+}
+
+func letStatement(elements ...Node) *token.Element {
+	return element("letStatement", elements...)
+}
+
+func doStatement(elements ...Node) *token.Element {
+	return element("doStatement", elements...)
+}
+
+func ifStatement(elements ...Node) *token.Element {
+	return element("ifStatement", elements...)
+}
+
+func whileStatement(elements ...Node) *token.Element {
+	return element("whileStatement", elements...)
+}
+
+func returnStatement(elements ...Node) *token.Element {
+	return element("returnStatement", elements...)
+}
+
+func expressionList(elements ...Node) *token.Element {
+	return element("expressionList", elements...)
+}
+
+func expression(elements ...Node) *token.Element {
+	return element("expression", elements...)
+}
+
+func term(elements ...Node) *token.Element {
+	return element("term", elements...)
+}
+
+func stringConstant(value string) *Token {
+	return tk("stringConstant", value)
+}
+
+func integerConstant(value int) *Token {
+	return tk("integerConstant", fmt.Sprintf("%d", value))
+}
+
+func classVarDec(elements ...Node) *token.Element {
+	return element("classVarDec", elements...)
+}
+
 func TestParser_LetStatement(t *testing.T) {
 	tokens := []Token{
-		{TokenType: "keyword", Value: "let"},
-		{TokenType: "identifier", Value: "a"},
-		{TokenType: "symbol", Value: "="},
-		{TokenType: "integerConstant", Value: "5"},
-		{TokenType: "symbol", Value: ";"},
-		{TokenType: "keyword", Value: "let"},
-		{TokenType: "identifier", Value: "b"},
-		{TokenType: "symbol", Value: "="},
-		{TokenType: "stringConstant", Value: "Hello, world!"},
-		{TokenType: "symbol", Value: ";"},
-		{TokenType: "keyword", Value: "let"},
-		{TokenType: "identifier", Value: "c"},
-		{TokenType: "symbol", Value: "="},
-		{TokenType: "keyword", Value: "true"},
-		{TokenType: "symbol", Value: ";"},
-		{TokenType: "keyword", Value: "let"},
-		{TokenType: "identifier", Value: "d"},
-		{TokenType: "symbol", Value: "="},
-		{TokenType: "keyword", Value: "false"},
-		{TokenType: "symbol", Value: ";"},
+		token.Keyword("let"),
+		token.Identifier("a"),
+		token.Symbol('='),
+		token.IntegerConstant(5),
+		token.Symbol(';'),
+
+		token.Keyword("let"),
+		token.Identifier("b"),
+		token.Symbol('='),
+		token.StringConstant("Hello, world!"),
+		token.Symbol(';'),
+
+		token.Keyword("let"),
+		token.Identifier("c"),
+		token.Symbol('='),
+		token.Keyword("true"),
+		token.Symbol(';'),
+
+		token.Keyword("let"),
+		token.Identifier("d"),
+		token.Symbol('='),
+		token.Keyword("false"),
+		token.Symbol(';'),
 	}
 	parser := NewParser(tokens)
 
 	expected := []Node{
-		&Element{
-			Tag: "letStatement",
-			Children: []Node{
-				&Token{
-					TokenType: "keyword",
-					Value:     "let",
-				},
-				&Token{
-					TokenType: "identifier",
-					Value:     "a",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     "=",
-				},
-				&Element{
-					Tag: "expression",
-					Children: []Node{
-						&Element{
-							Tag: "term",
-							Children: []Node{
-								&Token{
-									TokenType: "integerConstant",
-									Value:     "5",
-								},
-							},
-						},
-					},
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     ";",
-				},
-			},
-		},
-		&Element{
-			Tag: "letStatement",
-			Children: []Node{
-				&Token{
-					TokenType: "keyword",
-					Value:     "let",
-				},
-				&Token{
-					TokenType: "identifier",
-					Value:     "b",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     "=",
-				},
-				&Element{
-					Tag: "expression",
-					Children: []Node{
-						&Element{
-							Tag: "term",
-							Children: []Node{
-								&Token{
-									TokenType: "stringConstant",
-									Value:     "Hello, world!",
-								},
-							},
-						},
-					},
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     ";",
-				},
-			},
-		},
-		&Element{
-			Tag: "letStatement",
-			Children: []Node{
-				&Token{
-					TokenType: "keyword",
-					Value:     "let",
-				},
-				&Token{
-					TokenType: "identifier",
-					Value:     "c",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     "=",
-				},
-				&Element{
-					Tag: "expression",
-					Children: []Node{
-						&Element{
-							Tag: "term",
-							Children: []Node{
-								&Token{
-									TokenType: "keyword",
-									Value:     "true",
-								},
-							},
-						},
-					},
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     ";",
-				},
-			},
-		},
-		&Element{
-			Tag: "letStatement",
-			Children: []Node{
-				&Token{
-					TokenType: "keyword",
-					Value:     "let",
-				},
-				&Token{
-					TokenType: "identifier",
-					Value:     "d",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     "=",
-				},
-				&Element{
-					Tag: "expression",
-					Children: []Node{
-						&Element{
-							Tag: "term",
-							Children: []Node{
-								&Token{
-									TokenType: "keyword",
-									Value:     "false",
-								},
-							},
-						},
-					},
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     ";",
-				},
-			},
-		},
+		letStatement(
+			keyword("let"),
+			identifier("a"),
+			symbol('='),
+			expression(
+				term(
+					integerConstant(5),
+				),
+			),
+			symbol(';'),
+		),
+		letStatement(
+			keyword("let"),
+			identifier("b"),
+			symbol('='),
+			expression(
+				term(
+					stringConstant("Hello, world!"),
+				),
+			),
+			symbol(';'),
+		),
+		letStatement(
+			keyword("let"),
+			identifier("c"),
+			symbol('='),
+			expression(
+				term(
+					keyword("true"),
+				),
+			),
+			symbol(';'),
+		),
+		letStatement(
+			keyword("let"),
+			identifier("d"),
+			symbol('='),
+			expression(
+				term(
+					keyword("false"),
+				),
+			),
+			symbol(';'),
+		),
 	}
-	parsed, _ := parser.Parse(tokens)
+	parsed, err := parser.Parse(tokens)
+	if err != nil {
+		t.Errorf("Error: %v", err)
+	}
 
-	if !reflect.DeepEqual(parsed, expected) {
-		diff := cmp.Diff(parsed, expected)
-		t.Errorf("Diff %v", diff)
+	diff := cmp.Diff(parsed, expected)
+	if diff != "" {
+		t.Errorf("Diff: %v", diff)
 	}
 }
 
 func TestParser_DoStatementNoArgs(t *testing.T) {
 	tokens := []Token{
-		{TokenType: "keyword", Value: "do"},
-		{TokenType: "identifier", Value: "my_function"},
-		{TokenType: "symbol", Value: "("},
-		{TokenType: "symbol", Value: ")"},
-		{TokenType: "symbol", Value: ";"},
-		{TokenType: "keyword", Value: "do"},
-		{TokenType: "identifier", Value: "my_object"},
-		{TokenType: "symbol", Value: "."},
-		{TokenType: "identifier", Value: "my_function"},
-		{TokenType: "symbol", Value: "("},
-		{TokenType: "symbol", Value: ")"},
-		{TokenType: "symbol", Value: ";"},
-		{TokenType: "keyword", Value: "do"},
-		{TokenType: "identifier", Value: "my_object"},
-		{TokenType: "symbol", Value: "."},
-		{TokenType: "identifier", Value: "my_property"},
-		{TokenType: "symbol", Value: "."},
-		{TokenType: "identifier", Value: "my_function"},
-		{TokenType: "symbol", Value: "("},
-		{TokenType: "symbol", Value: ")"},
-		{TokenType: "symbol", Value: ";"},
+		token.Keyword("do"),
+		token.Identifier("my_function"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+
+		token.Keyword("do"),
+		token.Identifier("my_object"),
+		token.Symbol('.'),
+		token.Identifier("my_function"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+
+		token.Keyword("do"),
+		token.Identifier("my_object"),
+		token.Symbol('.'),
+		token.Identifier("my_property"),
+		token.Symbol('.'),
+		token.Identifier("my_function"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
 	}
 	parser := NewParser(tokens)
 
 	expected := []Node{
-		&Element{
-			Tag: "doStatement",
-			Children: []Node{
-				&Token{
-					TokenType: "keyword",
-					Value:     "do",
-				},
-				&Token{
-					TokenType: "identifier",
-					Value:     "my_function",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     "(",
-				},
-				&Element{
-					Tag: "expressionList",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     ")",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     ";",
-				},
-			},
-		},
-		&Element{
-			Tag: "doStatement",
-			Children: []Node{
-				&Token{
-					TokenType: "keyword",
-					Value:     "do",
-				},
-				&Token{
-					TokenType: "identifier",
-					Value:     "my_object",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     ".",
-				},
-				&Token{
-					TokenType: "identifier",
-					Value:     "my_function",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     "(",
-				},
-				&Element{
-					Tag: "expressionList",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     ")",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     ";",
-				},
-			},
-		},
-		&Element{
-			Tag: "doStatement",
-			Children: []Node{
-				&Token{
-					TokenType: "keyword",
-					Value:     "do",
-				},
-				&Token{
-					TokenType: "identifier",
-					Value:     "my_object",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     ".",
-				},
-				&Token{
-					TokenType: "identifier",
-					Value:     "my_property",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     ".",
-				},
-				&Token{
-					TokenType: "identifier",
-					Value:     "my_function",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     "(",
-				},
-				&Element{
-					Tag: "expressionList",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     ")",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     ";",
-				},
-			},
-		},
+		doStatement(
+			keyword("do"),
+			identifier("my_function"),
+			symbol('('),
+			expressionList(),
+			symbol(')'),
+			symbol(';'),
+		),
+		doStatement(
+			keyword("do"),
+			identifier("my_object"),
+			symbol('.'),
+			identifier("my_function"),
+			symbol('('),
+			expressionList(),
+			symbol(')'),
+			symbol(';'),
+		),
+		doStatement(
+			keyword("do"),
+			identifier("my_object"),
+			symbol('.'),
+			identifier("my_property"),
+			symbol('.'),
+			identifier("my_function"),
+			symbol('('),
+			expressionList(),
+			symbol(')'),
+			symbol(';'),
+		),
 	}
-	parsed, _ := parser.Parse(tokens)
 
-	if !reflect.DeepEqual(parsed, expected) {
-		diff := cmp.Diff(parsed, expected)
-		t.Errorf("Diff %v", diff)
+	parsed, err := parser.Parse(tokens)
+	if err != nil {
+		t.Errorf("Error %v", err)
+	}
+
+	diff := cmp.Diff(parsed, expected)
+	if diff != "" {
+		t.Errorf("Diff: %v", diff)
 	}
 }
 
 func TestParser_DoStatementWithArgs(t *testing.T) {
 	tokens := []Token{
-		{TokenType: "keyword", Value: "do"},
-		{TokenType: "identifier", Value: "my_function"},
-		{TokenType: "symbol", Value: "("},
-		{TokenType: "identifier", Value: "x"},
-		{TokenType: "symbol", Value: ")"},
-		{TokenType: "symbol", Value: ";"},
-		{TokenType: "keyword", Value: "do"},
-		{TokenType: "identifier", Value: "my_function_with_args"},
-		{TokenType: "symbol", Value: "("},
-		{TokenType: "keyword", Value: "false"},
-		{TokenType: "symbol", Value: ","},
-		{TokenType: "keyword", Value: "true"},
-		{TokenType: "symbol", Value: ","},
-		{TokenType: "integerConstant", Value: "555"},
-		{TokenType: "symbol", Value: ","},
-		{TokenType: "stringConstant", Value: "hello"},
-		{TokenType: "symbol", Value: ")"},
-		{TokenType: "symbol", Value: ";"},
+		token.Keyword("do"),
+		token.Identifier("my_function"),
+		token.Symbol('('),
+		token.Identifier("x"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+
+		token.Keyword("do"),
+		token.Identifier("my_function_with_args"),
+		token.Symbol('('),
+		token.Keyword("false"),
+		token.Symbol(','),
+		token.Keyword("true"),
+		token.Symbol(','),
+		token.IntegerConstant(555),
+		token.Symbol(','),
+		token.StringConstant("hello"),
+		token.Symbol(')'),
+		token.Symbol(';'),
 	}
 	parser := NewParser(tokens)
 
 	expected := []Node{
-		&Element{
-			Tag: "doStatement",
-			Children: []Node{
-				&Token{
-					TokenType: "keyword",
-					Value:     "do",
-				},
-				&Token{
-					TokenType: "identifier",
-					Value:     "my_function",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     "(",
-				},
-				&Element{
-					Tag: "expressionList",
-					Children: []Node{
-						&Token{
-							TokenType: "identifier",
-							Value:     "x",
-						},
-					},
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     ")",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     ";",
-				},
-			},
-		},
-		&Element{
-			Tag: "doStatement",
-			Children: []Node{
-				&Token{
-					TokenType: "keyword",
-					Value:     "do",
-				},
-				&Token{
-					TokenType: "identifier",
-					Value:     "my_function_with_args",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     "(",
-				},
-				&Element{
-					Tag: "expressionList",
-					Children: []Node{
-						&Token{
-							TokenType: "keyword",
-							Value:     "false",
-						},
-						&Token{
-							TokenType: "symbol",
-							Value:     ",",
-						},
-						&Token{
-							TokenType: "keyword",
-							Value:     "true",
-						},
-						&Token{
-							TokenType: "symbol",
-							Value:     ",",
-						},
-						&Token{
-							TokenType: "integerConstant",
-							Value:     "555",
-						},
-						&Token{
-							TokenType: "symbol",
-							Value:     ",",
-						},
-						&Token{
-							TokenType: "stringConstant",
-							Value:     "hello",
-						},
-					},
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     ")",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     ";",
-				},
-			},
-		},
+		doStatement(
+			keyword("do"),
+			identifier("my_function"),
+			symbol('('),
+			expressionList(
+				expression(
+					term(
+						identifier("x"),
+					),
+				),
+			),
+			symbol(')'),
+			symbol(';'),
+		),
+		doStatement(
+			keyword("do"),
+			identifier("my_function_with_args"),
+			symbol('('),
+			expressionList(
+				expression(
+					term(
+						keyword("false"),
+					),
+				),
+				symbol(','),
+				expression(
+					term(
+						keyword("true"),
+					),
+				),
+				symbol(','),
+				expression(
+					term(
+						integerConstant(555),
+					),
+				),
+				symbol(','),
+				expression(
+					term(
+
+						stringConstant("hello"),
+					),
+				),
+			),
+			symbol(')'),
+			symbol(';'),
+		),
 	}
 	parsed, _ := parser.Parse(tokens)
 
-	if !reflect.DeepEqual(parsed, expected) {
-		diff := cmp.Diff(parsed, expected)
-		t.Errorf("Diff %v", diff)
+	diff := cmp.Diff(parsed, expected)
+	if diff != "" {
+		t.Errorf("Diff: %v", diff)
+	}
+}
+
+func TestParser_IfStatement(t *testing.T) {
+	tokens := []Token{
+		token.Keyword("if"),
+		token.Symbol('('),
+		token.Identifier("x"),
+		token.Symbol('='),
+		token.IntegerConstant(11),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("let"),
+		token.Identifier("y"),
+		token.Symbol('='),
+		token.IntegerConstant(22),
+		token.Symbol(';'),
+		token.Symbol('}'),
+	}
+	parser := NewParser(tokens)
+
+	expected := []Node{
+		ifStatement(
+			keyword("if"),
+			symbol('('),
+			expression(
+				term(
+					identifier("x"),
+				),
+				symbol('='),
+				term(
+					integerConstant(11),
+				),
+			),
+			symbol(')'),
+			symbol('{'),
+			statements(
+				letStatement(
+					keyword("let"),
+					identifier("y"),
+					symbol('='),
+					expression(
+						term(
+							integerConstant(22),
+						),
+					),
+					symbol(';'),
+				),
+			),
+			symbol('}'),
+		),
+	}
+	parsed, _ := parser.Parse(tokens)
+
+	diff := cmp.Diff(parsed, expected)
+	if diff != "" {
+		t.Errorf("Diff: %v", diff)
 	}
 }
 
 func TestParser_ClassDeclaration(t *testing.T) {
 	tokens := []Token{
-		{TokenType: "keyword", Value: "class"},
-		{TokenType: "identifier", Value: "Main"},
-		{TokenType: "symbol", Value: "{"},
-		{TokenType: "keyword", Value: "field"},
-		{TokenType: "keyword", Value: "int"},
-		{TokenType: "identifier", Value: "x"},
-		{TokenType: "symbol", Value: ";"},
-		{TokenType: "keyword", Value: "method"},
-		{TokenType: "keyword", Value: "void"},
-		{TokenType: "identifier", Value: "example"},
-		{TokenType: "symbol", Value: "("},
-		{TokenType: "symbol", Value: ")"},
-		{TokenType: "symbol", Value: "{"},
-		{TokenType: "keyword", Value: "return"},
-		{TokenType: "integerConstant", Value: "5"},
-		{TokenType: "symbol", Value: ";"},
-		{TokenType: "symbol", Value: "}"},
-		{TokenType: "symbol", Value: "}"},
+		token.Keyword("class"),
+		token.Identifier("Main"),
+		token.Symbol('{'),
+
+		token.Keyword("field"),
+		token.Keyword("int"),
+		token.Identifier("x"),
+		token.Symbol(';'),
+
+		token.Keyword("method"),
+		token.Keyword("void"),
+		token.Identifier("example"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol('{'),
+
+		token.Keyword("return"),
+		token.IntegerConstant(5),
+		token.Symbol(';'),
+
+		token.Symbol('}'),
+		token.Symbol('}'),
+	}
+
+	parser := NewParser(tokens)
+
+	expected := []Node{
+		class(
+			keyword("class"),
+			identifier("Main"),
+			symbol('{'),
+			classVarDec(
+				keyword("field"),
+				keyword("int"),
+				identifier("x"),
+				symbol(';'),
+			),
+			subroutineDec(
+				keyword("method"),
+				keyword("void"),
+				identifier("example"),
+				symbol('('),
+				parameterList(),
+				symbol(')'),
+				subroutineBody(
+					symbol('{'),
+					statements(
+						returnStatement(
+							keyword("return"),
+							expression(
+								term(
+									integerConstant(5),
+								),
+							),
+							symbol(';'),
+						),
+					),
+					symbol('}'),
+				),
+			),
+			symbol('}'),
+		),
+	}
+	parsed, err := parser.Parse(tokens)
+	if err != nil {
+		t.Errorf("Error %v", err)
+	}
+
+	diff := cmp.Diff(parsed, expected)
+	if diff != "" {
+		t.Errorf("Diff: %v", diff)
+	}
+}
+
+func TestParser_Array(t *testing.T) {
+	tokens := []Token{
+		token.Keyword("class"),
+		token.Identifier("Main"),
+		token.Symbol('{'),
+		token.Keyword("function"),
+		token.Keyword("void"),
+		token.Identifier("main"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol('{'),
+
+		token.Keyword("var"),
+		token.Identifier("Array"),
+		token.Identifier("a"),
+		token.Symbol(';'),
+
+		token.Keyword("var"),
+		token.Keyword("int"),
+		token.Identifier("length"),
+		token.Symbol(';'),
+
+		token.Keyword("var"),
+		token.Keyword("int"),
+		token.Identifier("i"),
+		token.Symbol(','),
+		token.Identifier("sum"),
+		token.Symbol(';'),
+
+		token.Keyword("let"),
+		token.Identifier("length"),
+		token.Symbol('='),
+		token.Identifier("Keyboard"),
+		token.Symbol('.'),
+		token.Identifier("readInt"),
+		token.Symbol('('),
+		token.StringConstant("HOW MANY NUMBERS?"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+
+		token.Keyword("let"),
+		token.Identifier("a"),
+		token.Symbol('='),
+		token.Identifier("Array"),
+		token.Symbol('.'),
+		token.Identifier("new"),
+		token.Symbol('('),
+		token.Identifier("length"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+
+		token.Keyword("let"),
+		token.Identifier("i"),
+		token.Symbol('='),
+		token.IntegerConstant(0),
+		token.Symbol(';'),
+
+		token.Keyword("while"),
+		token.Symbol('('),
+		token.Identifier("i"),
+		token.Symbol('<'),
+		token.Identifier("length"),
+		token.Symbol(')'),
+		token.Symbol('{'),
+
+		token.Keyword("let"),
+		token.Identifier("a"),
+		token.Symbol('['),
+		token.Identifier("i"),
+		token.Symbol(']'),
+		token.Symbol('='),
+		token.Identifier("Keyboard"),
+		token.Symbol('.'),
+		token.Identifier("readInt"),
+		token.Symbol('('),
+		token.StringConstant("ENTER THE NEXT NUMBER:"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+
+		token.Keyword("let"),
+		token.Identifier("i"),
+		token.Symbol('='),
+		token.Identifier("i"),
+		token.Symbol('+'),
+		token.IntegerConstant(1),
+		token.Symbol(';'),
+
+		token.Symbol('}'),
+
+		token.Keyword("do"),
+		token.Identifier("Output"),
+		token.Symbol('.'),
+		token.Identifier("printInt"),
+		token.Symbol('('),
+		token.Identifier("sum"),
+		token.Symbol('/'),
+		token.Identifier("length"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+
+		token.Keyword("do"),
+		token.Identifier("Output"),
+		token.Symbol('.'),
+		token.Identifier("println"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+
+		token.Keyword("return"),
+		token.Symbol(';'),
+
+		token.Symbol('}'),
+		token.Symbol('}'),
 	}
 	parser := NewParser(tokens)
 
 	expected := []Node{
-		&Element{
-			Tag: "class",
-			Children: []Node{
-				&Token{
-					TokenType: "keyword",
-					Value:     "class",
-				},
-				&Token{
-					TokenType: "identifier",
-					Value:     "Main",
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     "{",
-				},
-				&Element{
-					Tag: "classVarDec",
-					Children: []Node{
-						&Token{
-							TokenType: "keyword",
-							Value:     "field",
-						},
-						&Token{
-							TokenType: "keyword",
-							Value:     "int",
-						},
-						&Token{
-							TokenType: "identifier",
-							Value:     "x",
-						},
-						&Token{
-							TokenType: "symbol",
-							Value:     ";",
-						},
-					},
-				},
-				&Element{
-					Tag: "subroutineDec",
-					Children: []Node{
-						&Token{
-							TokenType: "keyword",
-							Value:     "method",
-						},
-						&Token{
-							TokenType: "keyword",
-							Value:     "void",
-						},
-						&Token{
-							TokenType: "identifier",
-							Value:     "example",
-						},
-						&Token{
-							TokenType: "symbol",
-							Value:     "(",
-						},
-						&Element{
-							Tag: "parameterList",
-						},
-						&Token{
-							TokenType: "symbol",
-							Value:     ")",
-						},
-						&Element{
-							Tag: "subroutineBody",
-							Children: []Node{
-								&Token{
-									TokenType: "symbol",
-									Value:     "{",
-								},
-								&Element{
-									Tag: "statements",
-									Children: []Node{
-										&Element{
-											Tag: "returnStatement",
-											Children: []Node{
-												&Token{
-													TokenType: "keyword",
-													Value:     "return",
-												},
-												&Token{
-													TokenType: "integerConstant",
-													Value:     "5",
-												},
-												&Token{
-													TokenType: "symbol",
-													Value:     ";",
-												},
-											},
-										},
-									},
-								},
-								&Token{
-									TokenType: "symbol",
-									Value:     "}",
-								},
-							},
-						},
-					},
-				},
-				&Token{
-					TokenType: "symbol",
-					Value:     "}",
-				},
-			},
-		},
+		class(
+			keyword("class"),
+			identifier("Main"),
+			symbol('{'),
+			subroutineDec(
+				keyword("function"),
+				keyword("void"),
+				identifier("main"),
+				symbol('('),
+				parameterList(),
+				symbol(')'),
+				subroutineBody(
+					symbol('{'),
+					varDec(
+						keyword("var"),
+						identifier("Array"),
+						identifier("a"),
+						symbol(';'),
+					),
+					varDec(
+						keyword("var"),
+						keyword("int"),
+						identifier("length"),
+						symbol(';'),
+					),
+					varDec(
+						keyword("var"),
+						keyword("int"),
+						identifier("i"),
+						symbol(','),
+						identifier("sum"),
+						symbol(';'),
+					),
+					statements(
+						letStatement(
+							keyword("let"),
+							identifier("length"),
+							symbol('='),
+							expression(
+								term(
+									identifier("Keyboard"),
+									symbol('.'),
+									identifier("readInt"),
+									symbol('('),
+									expressionList(
+										expression(
+											term(
+												stringConstant("HOW MANY NUMBERS?"),
+											),
+										),
+									),
+									symbol(')'),
+								),
+							),
+							symbol(';'),
+						),
+						letStatement(
+							keyword("let"),
+							identifier("a"),
+							symbol('='),
+							expression(
+								term(
+									identifier("Array"),
+									symbol('.'),
+									identifier("new"),
+									symbol('('),
+									expressionList(
+										expression(
+											term(
+												identifier("length"),
+											),
+										),
+									),
+									symbol(')'),
+								),
+							),
+							symbol(';'),
+						),
+						letStatement(
+							keyword("let"),
+							identifier("i"),
+							symbol('='),
+							expression(
+								term(
+									integerConstant(0),
+								),
+							),
+							symbol(';'),
+						),
+						whileStatement(
+							keyword("while"),
+							symbol('('),
+							expression(
+								term(
+									identifier("i"),
+								),
+								symbol('<'),
+								term(
+									identifier("length"),
+								),
+							),
+							symbol(')'),
+							symbol('{'),
+							statements(
+								letStatement(
+									keyword("let"),
+									identifier("a"),
+									symbol('['),
+									expression(
+										term(
+											identifier("i"),
+										),
+									),
+									symbol(']'),
+									symbol('='),
+									expression(
+										term(
+											identifier("Keyboard"),
+											symbol('.'),
+											identifier("readInt"),
+											symbol('('),
+											expressionList(
+												expression(
+													term(
+														stringConstant("ENTER THE NEXT NUMBER:"),
+													),
+												),
+											),
+											symbol(')'),
+										),
+									),
+									symbol(';'),
+								),
+								letStatement(
+									keyword("let"),
+									identifier("i"),
+									symbol('='),
+									expression(
+										term(
+											identifier("i"),
+										),
+										symbol('+'),
+										term(
+											integerConstant(1),
+										),
+									),
+									symbol(';'),
+								),
+							),
+							symbol('}'),
+						),
+						doStatement(
+							keyword("do"),
+							identifier("Output"),
+							symbol('.'),
+							identifier("printInt"),
+							symbol('('),
+							expressionList(
+								expression(
+									term(
+										identifier("sum"),
+									),
+									symbol('/'),
+									term(
+										identifier("length"),
+									),
+								),
+							),
+							symbol(')'),
+							symbol(';'),
+						),
+						doStatement(
+							keyword("do"),
+							identifier("Output"),
+							symbol('.'),
+							identifier("println"),
+							symbol('('),
+							expressionList(),
+							symbol(')'),
+							symbol(';'),
+						),
+						returnStatement(
+							keyword("return"),
+							symbol(';'),
+						),
+					),
+					symbol('}'),
+				),
+			),
+			symbol('}'),
+		),
 	}
-	parsed, _ := parser.Parse(tokens)
 
-	if !reflect.DeepEqual(parsed, expected) {
-		diff := cmp.Diff(parsed, expected)
-		t.Errorf("Diff %v", diff)
+	parsed, err := parser.Parse(tokens)
+	if err != nil {
+		t.Errorf("Error %v", err)
+	}
+
+	diff := cmp.Diff(parsed, expected)
+	if diff != "" {
+		t.Errorf("Diff: %v", diff)
+	}
+}
+
+func TestParser_SquareMain(t *testing.T) {
+	tokens := []Token{
+		token.Keyword("class"),
+		token.Identifier("Main"),
+		token.Symbol('{'),
+
+		token.Keyword("static"),
+		token.Keyword("boolean"),
+		token.Identifier("test"),
+		token.Symbol(';'),
+
+		token.Keyword("function"),
+		token.Keyword("void"),
+		token.Identifier("main"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol('{'),
+
+		token.Keyword("var"),
+		token.Identifier("SquareGame"),
+		token.Identifier("game"),
+		token.Symbol(';'),
+
+		token.Keyword("let"),
+		token.Identifier("game"),
+		token.Symbol('='),
+		token.Identifier("SquareGame"),
+		token.Symbol('.'),
+		token.Identifier("new"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+
+		token.Keyword("do"),
+		token.Identifier("game"),
+		token.Symbol('.'),
+		token.Identifier("run"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+
+		token.Keyword("do"),
+		token.Identifier("game"),
+		token.Symbol('.'),
+		token.Identifier("dispose"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+
+		token.Keyword("return"),
+		token.Symbol(';'),
+
+		token.Symbol('}'),
+
+		token.Keyword("function"),
+		token.Keyword("void"),
+		token.Identifier("more"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol('{'),
+
+		token.Keyword("var"),
+		token.Keyword("int"),
+		token.Identifier("i"),
+		token.Symbol(','),
+		token.Identifier("j"),
+		token.Symbol(';'),
+
+		token.Keyword("var"),
+		token.Identifier("String"),
+		token.Identifier("s"),
+		token.Symbol(';'),
+
+		token.Keyword("var"),
+		token.Identifier("Array"),
+		token.Identifier("a"),
+		token.Symbol(';'),
+
+		token.Keyword("if"),
+		token.Symbol('('),
+		token.Keyword("false"),
+		token.Symbol(')'),
+		token.Symbol('{'),
+
+		token.Keyword("let"),
+		token.Identifier("s"),
+		token.Symbol('='),
+		token.StringConstant("string constant"),
+		token.Symbol(';'),
+
+		token.Keyword("let"),
+		token.Identifier("s"),
+		token.Symbol('='),
+		token.Keyword("null"),
+		token.Symbol(';'),
+
+		token.Keyword("let"),
+		token.Identifier("a"),
+		token.Symbol('['),
+		token.IntegerConstant(1),
+		token.Symbol(']'),
+		token.Symbol('='),
+		token.Identifier("a"),
+		token.Symbol('['),
+		token.IntegerConstant(2),
+		token.Symbol(']'),
+		token.Symbol(';'),
+
+		token.Symbol('}'),
+
+		token.Keyword("else"),
+		token.Symbol('{'),
+
+		token.Keyword("let"),
+		token.Identifier("i"),
+		token.Symbol('='),
+		token.Identifier("i"),
+		token.Symbol('*'),
+		token.Symbol('('),
+		token.Symbol('-'),
+		token.Identifier("j"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+
+		token.Keyword("let"),
+		token.Identifier("j"),
+		token.Symbol('='),
+		token.Identifier("j"),
+		token.Symbol('/'),
+		token.Symbol('('),
+		token.Symbol('-'),
+		token.IntegerConstant(2),
+		token.Symbol(')'),
+		token.Symbol(';'),
+
+		token.Keyword("let"),
+		token.Identifier("i"),
+		token.Symbol('='),
+		token.Identifier("i"),
+		token.Symbol('|'),
+		token.Identifier("j"),
+		token.Symbol(';'),
+
+		token.Symbol('}'),
+
+		token.Keyword("return"),
+		token.Symbol(';'),
+
+		token.Symbol('}'),
+		token.Symbol('}'),
+	}
+	parser := NewParser(tokens)
+
+	expected := []Node{
+		class(
+			keyword("class"),
+			identifier("Main"),
+			symbol('{'),
+			classVarDec(
+				keyword("static"),
+				keyword("boolean"),
+				identifier("test"),
+				symbol(';'),
+			),
+			subroutineDec(
+				keyword("function"),
+				keyword("void"),
+				identifier("main"),
+				symbol('('),
+				parameterList(),
+				symbol(')'),
+				subroutineBody(
+					symbol('{'),
+					varDec(
+						keyword("var"),
+						identifier("SquareGame"),
+						identifier("game"),
+						symbol(';'),
+					),
+					statements(
+						letStatement(
+							keyword("let"),
+							identifier("game"),
+							symbol('='),
+							expression(
+								term(
+									identifier("SquareGame"),
+									symbol('.'),
+									identifier("new"),
+									symbol('('),
+									expressionList(),
+									symbol(')'),
+								),
+							),
+							symbol(';'),
+						),
+						doStatement(
+							keyword("do"),
+							identifier("game"),
+							symbol('.'),
+							identifier("run"),
+							symbol('('),
+							expressionList(),
+							symbol(')'),
+							symbol(';'),
+						),
+						doStatement(
+							keyword("do"),
+							identifier("game"),
+							symbol('.'),
+							identifier("dispose"),
+							symbol('('),
+							expressionList(),
+							symbol(')'),
+							symbol(';'),
+						),
+						returnStatement(
+							keyword("return"),
+							symbol(';'),
+						),
+					),
+					symbol('}'),
+				),
+			),
+			subroutineDec(
+				keyword("function"),
+				keyword("void"),
+				identifier("more"),
+				symbol('('),
+				parameterList(),
+				symbol(')'),
+				subroutineBody(
+					symbol('{'),
+					varDec(
+						keyword("var"),
+						keyword("int"),
+						identifier("i"),
+						symbol(','),
+						identifier("j"),
+						symbol(';'),
+					),
+					varDec(
+						keyword("var"),
+						identifier("String"),
+						identifier("s"),
+						symbol(';'),
+					),
+					varDec(
+						keyword("var"),
+						identifier("Array"),
+						identifier("a"),
+						symbol(';'),
+					),
+					statements(
+						ifStatement(
+							keyword("if"),
+							symbol('('),
+							expression(
+								term(
+									keyword("false"),
+								),
+							),
+							symbol(')'),
+							symbol('{'),
+							statements(
+								letStatement(
+									keyword("let"),
+									identifier("s"),
+									symbol('='),
+									expression(
+										term(
+											stringConstant("string constant"),
+										),
+									),
+									symbol(';'),
+								),
+								letStatement(
+									keyword("let"),
+									identifier("s"),
+									symbol('='),
+									expression(
+										term(
+											keyword("null"),
+										),
+									),
+									symbol(';'),
+								),
+								letStatement(
+									keyword("let"),
+									identifier("a"),
+									symbol('['),
+									expression(
+										term(
+											integerConstant(1),
+										),
+									),
+									symbol(']'),
+									symbol('='),
+									expression(
+										term(
+											identifier("a"),
+											symbol('['),
+											expression(
+												term(
+													integerConstant(2),
+												),
+											),
+											symbol(']'),
+										),
+									),
+									symbol(';'),
+								),
+							),
+							symbol('}'),
+							keyword("else"),
+							symbol('{'),
+							statements(
+								letStatement(
+									keyword("let"),
+									identifier("i"),
+									symbol('='),
+									expression(
+										term(
+											identifier("i"),
+										),
+										symbol('*'),
+										term(
+											symbol('('),
+											expression(
+												term(
+													symbol('-'),
+													term(
+														identifier("j"),
+													),
+												),
+											),
+											symbol(')'),
+										),
+									),
+									symbol(';'),
+								),
+								letStatement(
+									keyword("let"),
+									identifier("j"),
+									symbol('='),
+									expression(
+										term(
+											identifier("j"),
+										),
+										symbol('/'),
+										term(
+											symbol('('),
+											expression(
+												term(
+													symbol('-'),
+													term(
+														integerConstant(2),
+													),
+												),
+											),
+											symbol(')'),
+										),
+									),
+									symbol(';'),
+								),
+								letStatement(
+									keyword("let"),
+									identifier("i"),
+									symbol('='),
+									expression(
+										term(
+											identifier("i"),
+										),
+										symbol('|'),
+										term(
+											identifier("j"),
+										),
+									),
+									symbol(';'),
+								),
+							),
+							symbol('}'),
+						),
+						returnStatement(
+							keyword("return"),
+							symbol(';'),
+						),
+					),
+					symbol('}'),
+				),
+			),
+			symbol('}'),
+		),
+	}
+
+	parsed, err := parser.Parse(tokens)
+	if err != nil {
+		t.Errorf("Error %v", err)
+	}
+
+	diff := cmp.Diff(parsed, expected)
+	if diff != "" {
+		t.Errorf("Diff: %v", diff)
+	}
+}
+
+func TestParser_SquareSquare(t *testing.T) {
+	tokens := []Token{
+		token.Keyword("class"),
+		token.Identifier("Square"),
+		token.Symbol('{'),
+		token.Keyword("field"),
+		token.Keyword("int"),
+		token.Identifier("x"),
+		token.Symbol(','),
+		token.Identifier("y"),
+		token.Symbol(';'),
+		token.Keyword("field"),
+		token.Keyword("int"),
+		token.Identifier("size"),
+		token.Symbol(';'),
+		token.Keyword("constructor"),
+		token.Identifier("Square"),
+		token.Identifier("new"),
+		token.Symbol('('),
+		token.Keyword("int"),
+		token.Identifier("Ax"),
+		token.Symbol(','),
+		token.Keyword("int"),
+		token.Identifier("Ay"),
+		token.Symbol(','),
+		token.Keyword("int"),
+		token.Identifier("Asize"),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("let"),
+		token.Identifier("x"),
+		token.Symbol('='),
+		token.Identifier("Ax"),
+		token.Symbol(';'),
+		token.Keyword("let"),
+		token.Identifier("y"),
+		token.Symbol('='),
+		token.Identifier("Ay"),
+		token.Symbol(';'),
+		token.Keyword("let"),
+		token.Identifier("size"),
+		token.Symbol('='),
+		token.Identifier("Asize"),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("draw"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("return"),
+		token.Keyword("this"),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("method"),
+		token.Keyword("void"),
+		token.Identifier("dispose"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("do"),
+		token.Identifier("Memory"),
+		token.Symbol('.'),
+		token.Identifier("deAlloc"),
+		token.Symbol('('),
+		token.Keyword("this"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("return"),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("method"),
+		token.Keyword("void"),
+		token.Identifier("draw"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("setColor"),
+		token.Symbol('('),
+		token.Keyword("true"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("drawRectangle"),
+		token.Symbol('('),
+		token.Identifier("x"),
+		token.Symbol(','),
+		token.Identifier("y"),
+		token.Symbol(','),
+		token.Identifier("x"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(','),
+		token.Identifier("y"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("return"),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("method"),
+		token.Keyword("void"),
+		token.Identifier("erase"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("setColor"),
+		token.Symbol('('),
+		token.Keyword("false"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("drawRectangle"),
+		token.Symbol('('),
+		token.Identifier("x"),
+		token.Symbol(','),
+		token.Identifier("y"),
+		token.Symbol(','),
+		token.Identifier("x"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(','),
+		token.Identifier("y"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("return"),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("method"),
+		token.Keyword("void"),
+		token.Identifier("incSize"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("if"),
+		token.Symbol('('),
+		token.Symbol('('),
+		token.Symbol('('),
+		token.Identifier("y"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(')'),
+		token.Symbol('<'),
+		token.IntegerConstant(254),
+		token.Symbol(')'),
+		token.Symbol('&'),
+		token.Symbol('('),
+		token.Symbol('('),
+		token.Identifier("x"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(')'),
+		token.Symbol('<'),
+		token.IntegerConstant(510),
+		token.Symbol(')'),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("do"),
+		token.Identifier("erase"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("let"),
+		token.Identifier("size"),
+		token.Symbol('='),
+		token.Identifier("size"),
+		token.Symbol('+'),
+		token.IntegerConstant(2),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("draw"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("return"),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("method"),
+		token.Keyword("void"),
+		token.Identifier("decSize"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("if"),
+		token.Symbol('('),
+		token.Identifier("size"),
+		token.Symbol('>'),
+		token.IntegerConstant(2),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("do"),
+		token.Identifier("erase"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("let"),
+		token.Identifier("size"),
+		token.Symbol('='),
+		token.Identifier("size"),
+		token.Symbol('-'),
+		token.IntegerConstant(2),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("draw"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("return"),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("method"),
+		token.Keyword("void"),
+		token.Identifier("moveUp"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("if"),
+		token.Symbol('('),
+		token.Identifier("y"),
+		token.Symbol('>'),
+		token.IntegerConstant(1),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("setColor"),
+		token.Symbol('('),
+		token.Keyword("false"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("drawRectangle"),
+		token.Symbol('('),
+		token.Identifier("x"),
+		token.Symbol(','),
+		token.Symbol('('),
+		token.Identifier("y"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(')'),
+		token.Symbol('-'),
+		token.IntegerConstant(1),
+		token.Symbol(','),
+		token.Identifier("x"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(','),
+		token.Identifier("y"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("let"),
+		token.Identifier("y"),
+		token.Symbol('='),
+		token.Identifier("y"),
+		token.Symbol('-'),
+		token.IntegerConstant(2),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("setColor"),
+		token.Symbol('('),
+		token.Keyword("true"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("drawRectangle"),
+		token.Symbol('('),
+		token.Identifier("x"),
+		token.Symbol(','),
+		token.Identifier("y"),
+		token.Symbol(','),
+		token.Identifier("x"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(','),
+		token.Identifier("y"),
+		token.Symbol('+'),
+		token.IntegerConstant(1),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("return"),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("method"),
+		token.Keyword("void"),
+		token.Identifier("moveDown"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("if"),
+		token.Symbol('('),
+		token.Symbol('('),
+		token.Identifier("y"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(')'),
+		token.Symbol('<'),
+		token.IntegerConstant(254),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("setColor"),
+		token.Symbol('('),
+		token.Keyword("false"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("drawRectangle"),
+		token.Symbol('('),
+		token.Identifier("x"),
+		token.Symbol(','),
+		token.Identifier("y"),
+		token.Symbol(','),
+		token.Identifier("x"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(','),
+		token.Identifier("y"),
+		token.Symbol('+'),
+		token.IntegerConstant(1),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("let"),
+		token.Identifier("y"),
+		token.Symbol('='),
+		token.Identifier("y"),
+		token.Symbol('+'),
+		token.IntegerConstant(2),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("setColor"),
+		token.Symbol('('),
+		token.Keyword("true"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("drawRectangle"),
+		token.Symbol('('),
+		token.Identifier("x"),
+		token.Symbol(','),
+		token.Symbol('('),
+		token.Identifier("y"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(')'),
+		token.Symbol('-'),
+		token.IntegerConstant(1),
+		token.Symbol(','),
+		token.Identifier("x"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(','),
+		token.Identifier("y"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("return"),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("method"),
+		token.Keyword("void"),
+		token.Identifier("moveLeft"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("if"),
+		token.Symbol('('),
+		token.Identifier("x"),
+		token.Symbol('>'),
+		token.IntegerConstant(1),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("setColor"),
+		token.Symbol('('),
+		token.Keyword("false"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("drawRectangle"),
+		token.Symbol('('),
+		token.Symbol('('),
+		token.Identifier("x"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(')'),
+		token.Symbol('-'),
+		token.IntegerConstant(1),
+		token.Symbol(','),
+		token.Identifier("y"),
+		token.Symbol(','),
+		token.Identifier("x"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(','),
+		token.Identifier("y"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("let"),
+		token.Identifier("x"),
+		token.Symbol('='),
+		token.Identifier("x"),
+		token.Symbol('-'),
+		token.IntegerConstant(2),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("setColor"),
+		token.Symbol('('),
+		token.Keyword("true"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("drawRectangle"),
+		token.Symbol('('),
+		token.Identifier("x"),
+		token.Symbol(','),
+		token.Identifier("y"),
+		token.Symbol(','),
+		token.Identifier("x"),
+		token.Symbol('+'),
+		token.IntegerConstant(1),
+		token.Symbol(','),
+		token.Identifier("y"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("return"),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("method"),
+		token.Keyword("void"),
+		token.Identifier("moveRight"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("if"),
+		token.Symbol('('),
+		token.Symbol('('),
+		token.Identifier("x"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(')'),
+		token.Symbol('<'),
+		token.IntegerConstant(510),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("setColor"),
+		token.Symbol('('),
+		token.Keyword("false"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("drawRectangle"),
+		token.Symbol('('),
+		token.Identifier("x"),
+		token.Symbol(','),
+		token.Identifier("y"),
+		token.Symbol(','),
+		token.Identifier("x"),
+		token.Symbol('+'),
+		token.IntegerConstant(1),
+		token.Symbol(','),
+		token.Identifier("y"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("let"),
+		token.Identifier("x"),
+		token.Symbol('='),
+		token.Identifier("x"),
+		token.Symbol('+'),
+		token.IntegerConstant(2),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("setColor"),
+		token.Symbol('('),
+		token.Keyword("true"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("Screen"),
+		token.Symbol('.'),
+		token.Identifier("drawRectangle"),
+		token.Symbol('('),
+		token.Symbol('('),
+		token.Identifier("x"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(')'),
+		token.Symbol('-'),
+		token.IntegerConstant(1),
+		token.Symbol(','),
+		token.Identifier("y"),
+		token.Symbol(','),
+		token.Identifier("x"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(','),
+		token.Identifier("y"),
+		token.Symbol('+'),
+		token.Identifier("size"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("return"),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Symbol('}'),
+	}
+	parser := NewParser(tokens)
+
+	expected := []Node{
+		class(
+			keyword("class"),
+			identifier("Square"),
+			symbol('{'),
+			classVarDec(
+				keyword("field"),
+				keyword("int"),
+				identifier("x"),
+				symbol(','),
+				identifier("y"),
+				symbol(';'),
+			),
+			classVarDec(
+				keyword("field"),
+				keyword("int"),
+				identifier("size"),
+				symbol(';'),
+			),
+			subroutineDec(
+				keyword("constructor"),
+				identifier("Square"),
+				identifier("new"),
+				symbol('('),
+				parameterList(
+					keyword("int"),
+					identifier("Ax"),
+					symbol(','),
+					keyword("int"),
+					identifier("Ay"),
+					symbol(','),
+					keyword("int"),
+					identifier("Asize"),
+				),
+				symbol(')'),
+				subroutineBody(
+					symbol('{'),
+					statements(
+						letStatement(
+							keyword("let"),
+							identifier("x"),
+							symbol('='),
+							expression(
+								term(
+									identifier("Ax"),
+								),
+							),
+							symbol(';'),
+						),
+						letStatement(
+							keyword("let"),
+							identifier("y"),
+							symbol('='),
+							expression(
+								term(
+									identifier("Ay"),
+								),
+							),
+							symbol(';'),
+						),
+						letStatement(
+							keyword("let"),
+							identifier("size"),
+							symbol('='),
+							expression(
+								term(
+									identifier("Asize"),
+								),
+							),
+							symbol(';'),
+						),
+						doStatement(
+							keyword("do"),
+							identifier("draw"),
+							symbol('('),
+							expressionList(),
+							symbol(')'),
+							symbol(';'),
+						),
+						returnStatement(
+							keyword("return"),
+							expression(
+								term(
+									keyword("this"),
+								),
+							),
+							symbol(';'),
+						),
+					),
+					symbol('}'),
+				),
+			),
+			subroutineDec(
+				keyword("method"),
+				keyword("void"),
+				identifier("dispose"),
+				symbol('('),
+				parameterList(),
+				symbol(')'),
+				subroutineBody(
+					symbol('{'),
+					statements(
+						doStatement(
+							keyword("do"),
+							identifier("Memory"),
+							symbol('.'),
+							identifier("deAlloc"),
+							symbol('('),
+							expressionList(
+								expression(
+									term(
+										keyword("this"),
+									),
+								),
+							),
+							symbol(')'),
+							symbol(';'),
+						),
+						returnStatement(
+							keyword("return"),
+							symbol(';'),
+						),
+					),
+					symbol('}'),
+				),
+			),
+			subroutineDec(
+				keyword("method"),
+				keyword("void"),
+				identifier("draw"),
+				symbol('('),
+				parameterList(),
+				symbol(')'),
+				subroutineBody(
+					symbol('{'),
+					statements(
+						doStatement(
+							keyword("do"),
+							identifier("Screen"),
+							symbol('.'),
+							identifier("setColor"),
+							symbol('('),
+							expressionList(
+								expression(
+									term(
+										keyword("true"),
+									),
+								),
+							),
+							symbol(')'),
+							symbol(';'),
+						),
+						doStatement(
+							keyword("do"),
+							identifier("Screen"),
+							symbol('.'),
+							identifier("drawRectangle"),
+							symbol('('),
+							expressionList(
+								expression(
+									term(
+										identifier("x"),
+									),
+								),
+								symbol(','),
+								expression(
+									term(
+										identifier("y"),
+									),
+								),
+								symbol(','),
+								expression(
+									term(
+										identifier("x"),
+									),
+									symbol('+'),
+									term(
+										identifier("size"),
+									),
+								),
+								symbol(','),
+								expression(
+									term(
+										identifier("y"),
+									),
+									symbol('+'),
+									term(
+										identifier("size"),
+									),
+								),
+							),
+							symbol(')'),
+							symbol(';'),
+						),
+						returnStatement(
+							keyword("return"),
+							symbol(';'),
+						),
+					),
+					symbol('}'),
+				),
+			),
+			subroutineDec(
+				keyword("method"),
+				keyword("void"),
+				identifier("erase"),
+				symbol('('),
+				parameterList(),
+				symbol(')'),
+				subroutineBody(
+					symbol('{'),
+					statements(
+						doStatement(
+							keyword("do"),
+							identifier("Screen"),
+							symbol('.'),
+							identifier("setColor"),
+							symbol('('),
+							expressionList(
+								expression(
+									term(
+										keyword("false"),
+									),
+								),
+							),
+							symbol(')'),
+							symbol(';'),
+						),
+						doStatement(
+							keyword("do"),
+							identifier("Screen"),
+							symbol('.'),
+							identifier("drawRectangle"),
+							symbol('('),
+							expressionList(
+								expression(
+									term(
+										identifier("x"),
+									),
+								),
+								symbol(','),
+								expression(
+									term(
+										identifier("y"),
+									),
+								),
+								symbol(','),
+								expression(
+									term(
+										identifier("x"),
+									),
+									symbol('+'),
+									term(
+										identifier("size"),
+									),
+								),
+								symbol(','),
+								expression(
+									term(
+										identifier("y"),
+									),
+									symbol('+'),
+									term(
+										identifier("size"),
+									),
+								),
+							),
+							symbol(')'),
+							symbol(';'),
+						),
+						returnStatement(
+							keyword("return"),
+							symbol(';'),
+						),
+					),
+					symbol('}'),
+				),
+			),
+			subroutineDec(
+				keyword("method"),
+				keyword("void"),
+				identifier("incSize"),
+				symbol('('),
+				parameterList(),
+				symbol(')'),
+				subroutineBody(
+					symbol('{'),
+					statements(
+						ifStatement(
+							keyword("if"),
+							symbol('('),
+							expression(
+								term(
+									symbol('('),
+									expression(
+										term(
+											symbol('('),
+											expression(
+												term(
+													identifier("y"),
+												),
+												symbol('+'),
+												term(
+													identifier("size"),
+												),
+											),
+											symbol(')'),
+										),
+										symbol('<'),
+										term(
+											integerConstant(254),
+										),
+									),
+									symbol(')'),
+								),
+								symbol('&'),
+								term(
+									symbol('('),
+									expression(
+										term(
+											symbol('('),
+											expression(
+												term(
+													identifier("x"),
+												),
+												symbol('+'),
+												term(
+													identifier("size"),
+												),
+											),
+											symbol(')'),
+										),
+										symbol('<'),
+										term(
+											integerConstant(510),
+										),
+									),
+									symbol(')'),
+								),
+							),
+							symbol(')'),
+							symbol('{'),
+							statements(
+								doStatement(
+									keyword("do"),
+									identifier("erase"),
+									symbol('('),
+									expressionList(),
+									symbol(')'),
+									symbol(';'),
+								),
+								letStatement(
+									keyword("let"),
+									identifier("size"),
+									symbol('='),
+									expression(
+										term(
+											identifier("size"),
+										),
+										symbol('+'),
+										term(
+											integerConstant(2),
+										),
+									),
+									symbol(';'),
+								),
+								doStatement(
+									keyword("do"),
+									identifier("draw"),
+									symbol('('),
+									expressionList(),
+									symbol(')'),
+									symbol(';'),
+								),
+							),
+							symbol('}'),
+						),
+						returnStatement(
+							keyword("return"),
+							symbol(';'),
+						),
+					),
+					symbol('}'),
+				),
+			),
+			subroutineDec(
+				keyword("method"),
+				keyword("void"),
+				identifier("decSize"),
+				symbol('('),
+				parameterList(),
+				symbol(')'),
+				subroutineBody(
+					symbol('{'),
+					statements(
+						ifStatement(
+							keyword("if"),
+							symbol('('),
+							expression(
+								term(
+									identifier("size"),
+								),
+								symbol('>'),
+								term(
+									integerConstant(2),
+								),
+							),
+							symbol(')'),
+							symbol('{'),
+							statements(
+								doStatement(
+									keyword("do"),
+									identifier("erase"),
+									symbol('('),
+									expressionList(),
+									symbol(')'),
+									symbol(';'),
+								),
+								letStatement(
+									keyword("let"),
+									identifier("size"),
+									symbol('='),
+									expression(
+										term(
+											identifier("size"),
+										),
+										symbol('-'),
+										term(
+											integerConstant(2),
+										),
+									),
+									symbol(';'),
+								),
+								doStatement(
+									keyword("do"),
+									identifier("draw"),
+									symbol('('),
+									expressionList(),
+									symbol(')'),
+									symbol(';'),
+								),
+							),
+							symbol('}'),
+						),
+						returnStatement(
+							keyword("return"),
+							symbol(';'),
+						),
+					),
+					symbol('}'),
+				),
+			),
+			subroutineDec(
+				keyword("method"),
+				keyword("void"),
+				identifier("moveUp"),
+				symbol('('),
+				parameterList(),
+				symbol(')'),
+				subroutineBody(
+					symbol('{'),
+					statements(
+						ifStatement(
+							keyword("if"),
+							symbol('('),
+							expression(
+								term(
+									identifier("y"),
+								),
+								symbol('>'),
+								term(
+									integerConstant(1),
+								),
+							),
+							symbol(')'),
+							symbol('{'),
+							statements(
+								doStatement(
+									keyword("do"),
+									identifier("Screen"),
+									symbol('.'),
+									identifier("setColor"),
+									symbol('('),
+									expressionList(
+										expression(
+											term(
+												keyword("false"),
+											),
+										),
+									),
+									symbol(')'),
+									symbol(';'),
+								),
+								doStatement(
+									keyword("do"),
+									identifier("Screen"),
+									symbol('.'),
+									identifier("drawRectangle"),
+									symbol('('),
+									expressionList(
+										expression(
+											term(
+												identifier("x"),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												symbol('('),
+												expression(
+													term(
+														identifier("y"),
+													),
+													symbol('+'),
+													term(
+														identifier("size"),
+													),
+												),
+												symbol(')'),
+											),
+											symbol('-'),
+											term(
+												integerConstant(1),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("x"),
+											),
+											symbol('+'),
+											term(
+												identifier("size"),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("y"),
+											),
+											symbol('+'),
+											term(
+												identifier("size"),
+											),
+										),
+									),
+									symbol(')'),
+									symbol(';'),
+								),
+								letStatement(
+									keyword("let"),
+									identifier("y"),
+									symbol('='),
+									expression(
+										term(
+											identifier("y"),
+										),
+										symbol('-'),
+										term(
+											integerConstant(2),
+										),
+									),
+									symbol(';'),
+								),
+								doStatement(
+									keyword("do"),
+									identifier("Screen"),
+									symbol('.'),
+									identifier("setColor"),
+									symbol('('),
+									expressionList(
+										expression(
+											term(
+												keyword("true"),
+											),
+										),
+									),
+									symbol(')'),
+									symbol(';'),
+								),
+								doStatement(
+									keyword("do"),
+									identifier("Screen"),
+									symbol('.'),
+									identifier("drawRectangle"),
+									symbol('('),
+									expressionList(
+										expression(
+											term(
+												identifier("x"),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("y"),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("x"),
+											),
+											symbol('+'),
+											term(
+												identifier("size"),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("y"),
+											),
+											symbol('+'),
+											term(
+												integerConstant(1),
+											),
+										),
+									),
+									symbol(')'),
+									symbol(';'),
+								),
+							),
+							symbol('}'),
+						),
+						returnStatement(
+							keyword("return"),
+							symbol(';'),
+						),
+					),
+					symbol('}'),
+				),
+			),
+			subroutineDec(
+				keyword("method"),
+				keyword("void"),
+				identifier("moveDown"),
+				symbol('('),
+				parameterList(),
+				symbol(')'),
+				subroutineBody(
+					symbol('{'),
+					statements(
+						ifStatement(
+							keyword("if"),
+							symbol('('),
+							expression(
+								term(
+									symbol('('),
+									expression(
+										term(
+											identifier("y"),
+										),
+										symbol('+'),
+										term(
+											identifier("size"),
+										),
+									),
+									symbol(')'),
+								),
+								symbol('<'),
+								term(
+									integerConstant(254),
+								),
+							),
+							symbol(')'),
+							symbol('{'),
+							statements(
+								doStatement(
+									keyword("do"),
+									identifier("Screen"),
+									symbol('.'),
+									identifier("setColor"),
+									symbol('('),
+									expressionList(
+										expression(
+											term(
+												keyword("false"),
+											),
+										),
+									),
+									symbol(')'),
+									symbol(';'),
+								),
+								doStatement(
+									keyword("do"),
+									identifier("Screen"),
+									symbol('.'),
+									identifier("drawRectangle"),
+									symbol('('),
+									expressionList(
+										expression(
+											term(
+												identifier("x"),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("y"),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("x"),
+											),
+											symbol('+'),
+											term(
+												identifier("size"),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("y"),
+											),
+											symbol('+'),
+											term(
+												integerConstant(1),
+											),
+										),
+									),
+									symbol(')'),
+									symbol(';'),
+								),
+								letStatement(
+									keyword("let"),
+									identifier("y"),
+									symbol('='),
+									expression(
+										term(
+											identifier("y"),
+										),
+										symbol('+'),
+										term(
+											integerConstant(2),
+										),
+									),
+									symbol(';'),
+								),
+								doStatement(
+									keyword("do"),
+									identifier("Screen"),
+									symbol('.'),
+									identifier("setColor"),
+									symbol('('),
+									expressionList(
+										expression(
+											term(
+												keyword("true"),
+											),
+										),
+									),
+									symbol(')'),
+									symbol(';'),
+								),
+								doStatement(
+									keyword("do"),
+									identifier("Screen"),
+									symbol('.'),
+									identifier("drawRectangle"),
+									symbol('('),
+									expressionList(
+										expression(
+											term(
+												identifier("x"),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												symbol('('),
+												expression(
+													term(
+														identifier("y"),
+													),
+													symbol('+'),
+													term(
+														identifier("size"),
+													),
+												),
+												symbol(')'),
+											),
+											symbol('-'),
+											term(
+												integerConstant(1),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("x"),
+											),
+											symbol('+'),
+											term(
+												identifier("size"),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("y"),
+											),
+											symbol('+'),
+											term(
+												identifier("size"),
+											),
+										),
+									),
+									symbol(')'),
+									symbol(';'),
+								),
+							),
+							symbol('}'),
+						),
+						returnStatement(
+							keyword("return"),
+							symbol(';'),
+						),
+					),
+					symbol('}'),
+				),
+			),
+			subroutineDec(
+				keyword("method"),
+				keyword("void"),
+				identifier("moveLeft"),
+				symbol('('),
+				parameterList(),
+				symbol(')'),
+				subroutineBody(
+					symbol('{'),
+					statements(
+						ifStatement(
+							keyword("if"),
+							symbol('('),
+							expression(
+								term(
+									identifier("x"),
+								),
+								symbol('>'),
+								term(
+									integerConstant(1),
+								),
+							),
+							symbol(')'),
+							symbol('{'),
+							statements(
+								doStatement(
+									keyword("do"),
+									identifier("Screen"),
+									symbol('.'),
+									identifier("setColor"),
+									symbol('('),
+									expressionList(
+										expression(
+											term(
+												keyword("false"),
+											),
+										),
+									),
+									symbol(')'),
+									symbol(';'),
+								),
+								doStatement(
+									keyword("do"),
+									identifier("Screen"),
+									symbol('.'),
+									identifier("drawRectangle"),
+									symbol('('),
+									expressionList(
+										expression(
+											term(
+												symbol('('),
+												expression(
+													term(
+														identifier("x"),
+													),
+													symbol('+'),
+													term(
+														identifier("size"),
+													),
+												),
+												symbol(')'),
+											),
+											symbol('-'),
+											term(
+												integerConstant(1),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("y"),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("x"),
+											),
+											symbol('+'),
+											term(
+												identifier("size"),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("y"),
+											),
+											symbol('+'),
+											term(
+												identifier("size"),
+											),
+										),
+									),
+									symbol(')'),
+									symbol(';'),
+								),
+								letStatement(
+									keyword("let"),
+									identifier("x"),
+									symbol('='),
+									expression(
+										term(
+											identifier("x"),
+										),
+										symbol('-'),
+										term(
+											integerConstant(2),
+										),
+									),
+									symbol(';'),
+								),
+								doStatement(
+									keyword("do"),
+									identifier("Screen"),
+									symbol('.'),
+									identifier("setColor"),
+									symbol('('),
+									expressionList(
+										expression(
+											term(
+												keyword("true"),
+											),
+										),
+									),
+									symbol(')'),
+									symbol(';'),
+								),
+								doStatement(
+									keyword("do"),
+									identifier("Screen"),
+									symbol('.'),
+									identifier("drawRectangle"),
+									symbol('('),
+									expressionList(
+										expression(
+											term(
+												identifier("x"),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("y"),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("x"),
+											),
+											symbol('+'),
+											term(
+												integerConstant(1),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("y"),
+											),
+											symbol('+'),
+											term(
+												identifier("size"),
+											),
+										),
+									),
+									symbol(')'),
+									symbol(';'),
+								),
+							),
+							symbol('}'),
+						),
+						returnStatement(
+							keyword("return"),
+							symbol(';'),
+						),
+					),
+					symbol('}'),
+				),
+			),
+			subroutineDec(
+				keyword("method"),
+				keyword("void"),
+				identifier("moveRight"),
+				symbol('('),
+				parameterList(),
+				symbol(')'),
+				subroutineBody(
+					symbol('{'),
+					statements(
+						ifStatement(
+							keyword("if"),
+							symbol('('),
+							expression(
+								term(
+									symbol('('),
+									expression(
+										term(
+											identifier("x"),
+										),
+										symbol('+'),
+										term(
+											identifier("size"),
+										),
+									),
+									symbol(')'),
+								),
+								symbol('<'),
+								term(
+									integerConstant(510),
+								),
+							),
+							symbol(')'),
+							symbol('{'),
+							statements(
+								doStatement(
+									keyword("do"),
+									identifier("Screen"),
+									symbol('.'),
+									identifier("setColor"),
+									symbol('('),
+									expressionList(
+										expression(
+											term(
+												keyword("false"),
+											),
+										),
+									),
+									symbol(')'),
+									symbol(';'),
+								),
+								doStatement(
+									keyword("do"),
+									identifier("Screen"),
+									symbol('.'),
+									identifier("drawRectangle"),
+									symbol('('),
+									expressionList(
+										expression(
+											term(
+												identifier("x"),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("y"),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("x"),
+											),
+											symbol('+'),
+											term(
+												integerConstant(1),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("y"),
+											),
+											symbol('+'),
+											term(
+												identifier("size"),
+											),
+										),
+									),
+									symbol(')'),
+									symbol(';'),
+								),
+								letStatement(
+									keyword("let"),
+									identifier("x"),
+									symbol('='),
+									expression(
+										term(
+											identifier("x"),
+										),
+										symbol('+'),
+										term(
+											integerConstant(2),
+										),
+									),
+									symbol(';'),
+								),
+								doStatement(
+									keyword("do"),
+									identifier("Screen"),
+									symbol('.'),
+									identifier("setColor"),
+									symbol('('),
+									expressionList(
+										expression(
+											term(
+												keyword("true"),
+											),
+										),
+									),
+									symbol(')'),
+									symbol(';'),
+								),
+								doStatement(
+									keyword("do"),
+									identifier("Screen"),
+									symbol('.'),
+									identifier("drawRectangle"),
+									symbol('('),
+									expressionList(
+										expression(
+											term(
+												symbol('('),
+												expression(
+													term(
+														identifier("x"),
+													),
+													symbol('+'),
+													term(
+														identifier("size"),
+													),
+												),
+												symbol(')'),
+											),
+											symbol('-'),
+											term(
+												integerConstant(1),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("y"),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("x"),
+											),
+											symbol('+'),
+											term(
+												identifier("size"),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												identifier("y"),
+											),
+											symbol('+'),
+											term(
+												identifier("size"),
+											),
+										),
+									),
+									symbol(')'),
+									symbol(';'),
+								),
+							),
+							symbol('}'),
+						),
+						returnStatement(
+							keyword("return"),
+							symbol(';'),
+						),
+					),
+					symbol('}'),
+				),
+			),
+			symbol('}'),
+		),
+	}
+
+	parsed, err := parser.Parse(tokens)
+	if err != nil {
+		t.Errorf("Error %v", err)
+	}
+
+	diff := cmp.Diff(parsed, expected)
+	if diff != "" {
+		t.Errorf("Diff: %v", diff)
+	}
+}
+
+func TestParser_SquareSquareGame(t *testing.T) {
+	tokens := []Token{
+		token.Keyword("class"),
+		token.Identifier("SquareGame"),
+		token.Symbol('{'),
+		token.Keyword("field"),
+		token.Identifier("Square"),
+		token.Identifier("square"),
+		token.Symbol(';'),
+		token.Keyword("field"),
+		token.Keyword("int"),
+		token.Identifier("direction"),
+		token.Symbol(';'),
+		token.Keyword("constructor"),
+		token.Identifier("SquareGame"),
+		token.Identifier("new"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("let"),
+		token.Identifier("square"),
+		token.Symbol('='),
+		token.Identifier("Square"),
+		token.Symbol('.'),
+		token.Identifier("new"),
+		token.Symbol('('),
+		token.IntegerConstant(0),
+		token.Symbol(','),
+		token.IntegerConstant(0),
+		token.Symbol(','),
+		token.IntegerConstant(30),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("let"),
+		token.Identifier("direction"),
+		token.Symbol('='),
+		token.IntegerConstant(0),
+		token.Symbol(';'),
+		token.Keyword("return"),
+		token.Keyword("this"),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("method"),
+		token.Keyword("void"),
+		token.Identifier("dispose"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("do"),
+		token.Identifier("square"),
+		token.Symbol('.'),
+		token.Identifier("dispose"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("Memory"),
+		token.Symbol('.'),
+		token.Identifier("deAlloc"),
+		token.Symbol('('),
+		token.Keyword("this"),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("return"),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("method"),
+		token.Keyword("void"),
+		token.Identifier("moveSquare"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("if"),
+		token.Symbol('('),
+		token.Identifier("direction"),
+		token.Symbol('='),
+		token.IntegerConstant(1),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("do"),
+		token.Identifier("square"),
+		token.Symbol('.'),
+		token.Identifier("moveUp"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("if"),
+		token.Symbol('('),
+		token.Identifier("direction"),
+		token.Symbol('='),
+		token.IntegerConstant(2),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("do"),
+		token.Identifier("square"),
+		token.Symbol('.'),
+		token.Identifier("moveDown"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("if"),
+		token.Symbol('('),
+		token.Identifier("direction"),
+		token.Symbol('='),
+		token.IntegerConstant(3),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("do"),
+		token.Identifier("square"),
+		token.Symbol('.'),
+		token.Identifier("moveLeft"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("if"),
+		token.Symbol('('),
+		token.Identifier("direction"),
+		token.Symbol('='),
+		token.IntegerConstant(4),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("do"),
+		token.Identifier("square"),
+		token.Symbol('.'),
+		token.Identifier("moveRight"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("do"),
+		token.Identifier("Sys"),
+		token.Symbol('.'),
+		token.Identifier("wait"),
+		token.Symbol('('),
+		token.IntegerConstant(5),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("return"),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("method"),
+		token.Keyword("void"),
+		token.Identifier("run"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("var"),
+		token.Keyword("char"),
+		token.Identifier("key"),
+		token.Symbol(';'),
+		token.Keyword("var"),
+		token.Keyword("boolean"),
+		token.Identifier("exit"),
+		token.Symbol(';'),
+		token.Keyword("let"),
+		token.Identifier("exit"),
+		token.Symbol('='),
+		token.Keyword("false"),
+		token.Symbol(';'),
+		token.Keyword("while"),
+		token.Symbol('('),
+		token.Symbol('~'),
+		token.Identifier("exit"),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("while"),
+		token.Symbol('('),
+		token.Identifier("key"),
+		token.Symbol('='),
+		token.IntegerConstant(0),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("let"),
+		token.Identifier("key"),
+		token.Symbol('='),
+		token.Identifier("Keyboard"),
+		token.Symbol('.'),
+		token.Identifier("keyPressed"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("moveSquare"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("if"),
+		token.Symbol('('),
+		token.Identifier("key"),
+		token.Symbol('='),
+		token.IntegerConstant(81),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("let"),
+		token.Identifier("exit"),
+		token.Symbol('='),
+		token.Keyword("true"),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("if"),
+		token.Symbol('('),
+		token.Identifier("key"),
+		token.Symbol('='),
+		token.IntegerConstant(90),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("do"),
+		token.Identifier("square"),
+		token.Symbol('.'),
+		token.Identifier("decSize"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("if"),
+		token.Symbol('('),
+		token.Identifier("key"),
+		token.Symbol('='),
+		token.IntegerConstant(88),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("do"),
+		token.Identifier("square"),
+		token.Symbol('.'),
+		token.Identifier("incSize"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("if"),
+		token.Symbol('('),
+		token.Identifier("key"),
+		token.Symbol('='),
+		token.IntegerConstant(131),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("let"),
+		token.Identifier("direction"),
+		token.Symbol('='),
+		token.IntegerConstant(1),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("if"),
+		token.Symbol('('),
+		token.Identifier("key"),
+		token.Symbol('='),
+		token.IntegerConstant(133),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("let"),
+		token.Identifier("direction"),
+		token.Symbol('='),
+		token.IntegerConstant(2),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("if"),
+		token.Symbol('('),
+		token.Identifier("key"),
+		token.Symbol('='),
+		token.IntegerConstant(130),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("let"),
+		token.Identifier("direction"),
+		token.Symbol('='),
+		token.IntegerConstant(3),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("if"),
+		token.Symbol('('),
+		token.Identifier("key"),
+		token.Symbol('='),
+		token.IntegerConstant(132),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("let"),
+		token.Identifier("direction"),
+		token.Symbol('='),
+		token.IntegerConstant(4),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Keyword("while"),
+		token.Symbol('('),
+		token.Symbol('~'),
+		token.Symbol('('),
+		token.Identifier("key"),
+		token.Symbol('='),
+		token.IntegerConstant(0),
+		token.Symbol(')'),
+		token.Symbol(')'),
+		token.Symbol('{'),
+		token.Keyword("let"),
+		token.Identifier("key"),
+		token.Symbol('='),
+		token.Identifier("Keyboard"),
+		token.Symbol('.'),
+		token.Identifier("keyPressed"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Keyword("do"),
+		token.Identifier("moveSquare"),
+		token.Symbol('('),
+		token.Symbol(')'),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Symbol('}'),
+		token.Keyword("return"),
+		token.Symbol(';'),
+		token.Symbol('}'),
+		token.Symbol('}'),
+	}
+
+	parser := NewParser(tokens)
+
+	expected := []Node{
+		class(
+			keyword("class"),
+			identifier("SquareGame"),
+			symbol('{'),
+			classVarDec(
+				keyword("field"),
+				identifier("Square"),
+				identifier("square"),
+				symbol(';'),
+			),
+			classVarDec(
+				keyword("field"),
+				keyword("int"),
+				identifier("direction"),
+				symbol(';'),
+			),
+			subroutineDec(
+				keyword("constructor"),
+				identifier("SquareGame"),
+				identifier("new"),
+				symbol('('),
+				parameterList(),
+				symbol(')'),
+				subroutineBody(
+					symbol('{'),
+					statements(
+						letStatement(
+							keyword("let"),
+							identifier("square"),
+							symbol('='),
+							expression(
+								term(
+									identifier("Square"),
+									symbol('.'),
+									identifier("new"),
+									symbol('('),
+									expressionList(
+										expression(
+											term(
+												integerConstant(0),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												integerConstant(0),
+											),
+										),
+										symbol(','),
+										expression(
+											term(
+												integerConstant(30),
+											),
+										),
+									),
+									symbol(')'),
+								),
+							),
+							symbol(';'),
+						),
+						letStatement(
+							keyword("let"),
+							identifier("direction"),
+							symbol('='),
+							expression(
+								term(
+									integerConstant(0),
+								),
+							),
+							symbol(';'),
+						),
+						returnStatement(
+							keyword("return"),
+							expression(
+								term(
+									keyword("this"),
+								),
+							),
+							symbol(';'),
+						),
+					),
+					symbol('}'),
+				),
+			),
+			subroutineDec(
+				keyword("method"),
+				keyword("void"),
+				identifier("dispose"),
+				symbol('('),
+				parameterList(),
+				symbol(')'),
+				subroutineBody(
+					symbol('{'),
+					statements(
+						doStatement(
+							keyword("do"),
+							identifier("square"),
+							symbol('.'),
+							identifier("dispose"),
+							symbol('('),
+							expressionList(),
+							symbol(')'),
+							symbol(';'),
+						),
+						doStatement(
+							keyword("do"),
+							identifier("Memory"),
+							symbol('.'),
+							identifier("deAlloc"),
+							symbol('('),
+							expressionList(
+								expression(
+									term(
+										keyword("this"),
+									),
+								),
+							),
+							symbol(')'),
+							symbol(';'),
+						),
+						returnStatement(
+							keyword("return"),
+							symbol(';'),
+						),
+					),
+					symbol('}'),
+				),
+			),
+			subroutineDec(
+				keyword("method"),
+				keyword("void"),
+				identifier("moveSquare"),
+				symbol('('),
+				parameterList(),
+				symbol(')'),
+				subroutineBody(
+					symbol('{'),
+					statements(
+						ifStatement(
+							keyword("if"),
+							symbol('('),
+							expression(
+								term(
+									identifier("direction"),
+								),
+								symbol('='),
+								term(
+									integerConstant(1),
+								),
+							),
+							symbol(')'),
+							symbol('{'),
+							statements(
+								doStatement(
+									keyword("do"),
+									identifier("square"),
+									symbol('.'),
+									identifier("moveUp"),
+									symbol('('),
+									expressionList(),
+									symbol(')'),
+									symbol(';'),
+								),
+							),
+							symbol('}'),
+						),
+						ifStatement(
+							keyword("if"),
+							symbol('('),
+							expression(
+								term(
+									identifier("direction"),
+								),
+								symbol('='),
+								term(
+									integerConstant(2),
+								),
+							),
+							symbol(')'),
+							symbol('{'),
+							statements(
+								doStatement(
+									keyword("do"),
+									identifier("square"),
+									symbol('.'),
+									identifier("moveDown"),
+									symbol('('),
+									expressionList(),
+									symbol(')'),
+									symbol(';'),
+								),
+							),
+							symbol('}'),
+						),
+						ifStatement(
+							keyword("if"),
+							symbol('('),
+							expression(
+								term(
+									identifier("direction"),
+								),
+								symbol('='),
+								term(
+									integerConstant(3),
+								),
+							),
+							symbol(')'),
+							symbol('{'),
+							statements(
+								doStatement(
+									keyword("do"),
+									identifier("square"),
+									symbol('.'),
+									identifier("moveLeft"),
+									symbol('('),
+									expressionList(),
+									symbol(')'),
+									symbol(';'),
+								),
+							),
+							symbol('}'),
+						),
+						ifStatement(
+							keyword("if"),
+							symbol('('),
+							expression(
+								term(
+									identifier("direction"),
+								),
+								symbol('='),
+								term(
+									integerConstant(4),
+								),
+							),
+							symbol(')'),
+							symbol('{'),
+							statements(
+								doStatement(
+									keyword("do"),
+									identifier("square"),
+									symbol('.'),
+									identifier("moveRight"),
+									symbol('('),
+									expressionList(),
+									symbol(')'),
+									symbol(';'),
+								),
+							),
+							symbol('}'),
+						),
+						doStatement(
+							keyword("do"),
+							identifier("Sys"),
+							symbol('.'),
+							identifier("wait"),
+							symbol('('),
+							expressionList(
+								expression(
+									term(
+										integerConstant(5),
+									),
+								),
+							),
+							symbol(')'),
+							symbol(';'),
+						),
+						returnStatement(
+							keyword("return"),
+							symbol(';'),
+						),
+					),
+					symbol('}'),
+				),
+			),
+			subroutineDec(
+				keyword("method"),
+				keyword("void"),
+				identifier("run"),
+				symbol('('),
+				parameterList(),
+				symbol(')'),
+				subroutineBody(
+					symbol('{'),
+					varDec(
+						keyword("var"),
+						keyword("char"),
+						identifier("key"),
+						symbol(';'),
+					),
+					varDec(
+						keyword("var"),
+						keyword("boolean"),
+						identifier("exit"),
+						symbol(';'),
+					),
+					statements(
+						letStatement(
+							keyword("let"),
+							identifier("exit"),
+							symbol('='),
+							expression(
+								term(
+									keyword("false"),
+								),
+							),
+							symbol(';'),
+						),
+						whileStatement(
+							keyword("while"),
+							symbol('('),
+							expression(
+								term(
+									symbol('~'),
+									term(
+										identifier("exit"),
+									),
+								),
+							),
+							symbol(')'),
+							symbol('{'),
+							statements(
+								whileStatement(
+									keyword("while"),
+									symbol('('),
+									expression(
+										term(
+											identifier("key"),
+										),
+										symbol('='),
+										term(
+											integerConstant(0),
+										),
+									),
+									symbol(')'),
+									symbol('{'),
+									statements(
+										letStatement(
+											keyword("let"),
+											identifier("key"),
+											symbol('='),
+											expression(
+												term(
+													identifier("Keyboard"),
+													symbol('.'),
+													identifier("keyPressed"),
+													symbol('('),
+													expressionList(),
+													symbol(')'),
+												),
+											),
+											symbol(';'),
+										),
+										doStatement(
+											keyword("do"),
+											identifier("moveSquare"),
+											symbol('('),
+											expressionList(),
+											symbol(')'),
+											symbol(';'),
+										),
+									),
+									symbol('}'),
+								),
+								ifStatement(
+									keyword("if"),
+									symbol('('),
+									expression(
+										term(
+											identifier("key"),
+										),
+										symbol('='),
+										term(
+											integerConstant(81),
+										),
+									),
+									symbol(')'),
+									symbol('{'),
+									statements(
+										letStatement(
+											keyword("let"),
+											identifier("exit"),
+											symbol('='),
+											expression(
+												term(
+													keyword("true"),
+												),
+											),
+											symbol(';'),
+										),
+									),
+									symbol('}'),
+								),
+								ifStatement(
+									keyword("if"),
+									symbol('('),
+									expression(
+										term(
+											identifier("key"),
+										),
+										symbol('='),
+										term(
+											integerConstant(90),
+										),
+									),
+									symbol(')'),
+									symbol('{'),
+									statements(
+										doStatement(
+											keyword("do"),
+											identifier("square"),
+											symbol('.'),
+											identifier("decSize"),
+											symbol('('),
+											expressionList(),
+											symbol(')'),
+											symbol(';'),
+										),
+									),
+									symbol('}'),
+								),
+								ifStatement(
+									keyword("if"),
+									symbol('('),
+									expression(
+										term(
+											identifier("key"),
+										),
+										symbol('='),
+										term(
+											integerConstant(88),
+										),
+									),
+									symbol(')'),
+									symbol('{'),
+									statements(
+										doStatement(
+											keyword("do"),
+											identifier("square"),
+											symbol('.'),
+											identifier("incSize"),
+											symbol('('),
+											expressionList(),
+											symbol(')'),
+											symbol(';'),
+										),
+									),
+									symbol('}'),
+								),
+								ifStatement(
+									keyword("if"),
+									symbol('('),
+									expression(
+										term(
+											identifier("key"),
+										),
+										symbol('='),
+										term(
+											integerConstant(131),
+										),
+									),
+									symbol(')'),
+									symbol('{'),
+									statements(
+										letStatement(
+											keyword("let"),
+											identifier("direction"),
+											symbol('='),
+											expression(
+												term(
+													integerConstant(1),
+												),
+											),
+											symbol(';'),
+										),
+									),
+									symbol('}'),
+								),
+								ifStatement(
+									keyword("if"),
+									symbol('('),
+									expression(
+										term(
+											identifier("key"),
+										),
+										symbol('='),
+										term(
+											integerConstant(133),
+										),
+									),
+									symbol(')'),
+									symbol('{'),
+									statements(
+										letStatement(
+											keyword("let"),
+											identifier("direction"),
+											symbol('='),
+											expression(
+												term(
+													integerConstant(2),
+												),
+											),
+											symbol(';'),
+										),
+									),
+									symbol('}'),
+								),
+								ifStatement(
+									keyword("if"),
+									symbol('('),
+									expression(
+										term(
+											identifier("key"),
+										),
+										symbol('='),
+										term(
+											integerConstant(130),
+										),
+									),
+									symbol(')'),
+									symbol('{'),
+									statements(
+										letStatement(
+											keyword("let"),
+											identifier("direction"),
+											symbol('='),
+											expression(
+												term(
+													integerConstant(3),
+												),
+											),
+											symbol(';'),
+										),
+									),
+									symbol('}'),
+								),
+								ifStatement(
+									keyword("if"),
+									symbol('('),
+									expression(
+										term(
+											identifier("key"),
+										),
+										symbol('='),
+										term(
+											integerConstant(132),
+										),
+									),
+									symbol(')'),
+									symbol('{'),
+									statements(
+										letStatement(
+											keyword("let"),
+											identifier("direction"),
+											symbol('='),
+											expression(
+												term(
+													integerConstant(4),
+												),
+											),
+											symbol(';'),
+										),
+									),
+									symbol('}'),
+								),
+								whileStatement(
+									keyword("while"),
+									symbol('('),
+									expression(
+										term(
+											symbol('~'),
+											term(
+												symbol('('),
+												expression(
+													term(
+														identifier("key"),
+													),
+													symbol('='),
+													term(
+														integerConstant(0),
+													),
+												),
+												symbol(')'),
+											),
+										),
+									),
+									symbol(')'),
+									symbol('{'),
+									statements(
+										letStatement(
+											keyword("let"),
+											identifier("key"),
+											symbol('='),
+											expression(
+												term(
+													identifier("Keyboard"),
+													symbol('.'),
+													identifier("keyPressed"),
+													symbol('('),
+													expressionList(),
+													symbol(')'),
+												),
+											),
+											symbol(';'),
+										),
+										doStatement(
+											keyword("do"),
+											identifier("moveSquare"),
+											symbol('('),
+											expressionList(),
+											symbol(')'),
+											symbol(';'),
+										),
+									),
+									symbol('}'),
+								),
+							),
+							symbol('}'),
+						),
+						returnStatement(
+							keyword("return"),
+							symbol(';'),
+						),
+					),
+					symbol('}'),
+				),
+			),
+			symbol('}'),
+		),
+	}
+
+	parsed, err := parser.Parse(tokens)
+	if err != nil {
+		t.Errorf("Error %v", err)
+	}
+
+	diff := cmp.Diff(parsed, expected)
+	if diff != "" {
+		t.Errorf("Diff: %v", diff)
 	}
 }
