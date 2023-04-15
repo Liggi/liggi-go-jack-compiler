@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"liggi-go-jack-compiler/token"
 	"regexp"
 )
 
@@ -12,10 +13,7 @@ type Tokeniser struct {
 	token_buffer rune
 }
 
-type Token struct {
-	TokenType string
-	Value     string
-}
+type Token = token.Token
 
 func NewTokeniser(r io.Reader) *Tokeniser {
 	scanner := bufio.NewScanner(r)
@@ -167,7 +165,7 @@ func isValidIdentifier(char rune) bool {
 
 func isKeyword(identifier string) bool {
 	keywords := []string{
-		"class", "function", "void", "return", "do", "let", "var", "int", "while", "field", "constructor", "this", "method", "true", "false", "if",
+		"class", "function", "void", "return", "do", "let", "var", "int", "while", "field", "constructor", "this", "method", "true", "false", "if", "else", "boolean",
 	}
 
 	for _, keyword := range keywords {

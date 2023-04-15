@@ -75,7 +75,7 @@ func (p *Parser) ExpectSequence(expected []TokenMatchable) ([]Token, error) {
 	return parsedTokens, nil
 }
 
-func (p *Parser) Parse(tokens []Token) ([]Node, error) {
+func (p *Parser) Parse() ([]Node, error) {
 	parsed := []Node{}
 
 	for p.Scan() {

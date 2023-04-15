@@ -176,7 +176,7 @@ func TestParser_LetStatement(t *testing.T) {
 			symbol(';'),
 		),
 	}
-	parsed, err := parser.Parse(tokens)
+	parsed, err := parser.Parse()
 	if err != nil {
 		t.Errorf("Error: %v", err)
 	}
@@ -248,7 +248,7 @@ func TestParser_DoStatementNoArgs(t *testing.T) {
 		),
 	}
 
-	parsed, err := parser.Parse(tokens)
+	parsed, err := parser.Parse()
 	if err != nil {
 		t.Errorf("Error %v", err)
 	}
@@ -332,7 +332,7 @@ func TestParser_DoStatementWithArgs(t *testing.T) {
 			symbol(';'),
 		),
 	}
-	parsed, _ := parser.Parse(tokens)
+	parsed, _ := parser.Parse()
 
 	diff := cmp.Diff(parsed, expected)
 	if diff != "" {
@@ -389,7 +389,7 @@ func TestParser_IfStatement(t *testing.T) {
 			symbol('}'),
 		),
 	}
-	parsed, _ := parser.Parse(tokens)
+	parsed, _ := parser.Parse()
 
 	diff := cmp.Diff(parsed, expected)
 	if diff != "" {
@@ -462,7 +462,7 @@ func TestParser_ClassDeclaration(t *testing.T) {
 			symbol('}'),
 		),
 	}
-	parsed, err := parser.Parse(tokens)
+	parsed, err := parser.Parse()
 	if err != nil {
 		t.Errorf("Error %v", err)
 	}
@@ -783,7 +783,7 @@ func TestParser_Array(t *testing.T) {
 		),
 	}
 
-	parsed, err := parser.Parse(tokens)
+	parsed, err := parser.Parse()
 	if err != nil {
 		t.Errorf("Error %v", err)
 	}
@@ -1189,7 +1189,7 @@ func TestParser_SquareMain(t *testing.T) {
 		),
 	}
 
-	parsed, err := parser.Parse(tokens)
+	parsed, err := parser.Parse()
 	if err != nil {
 		t.Errorf("Error %v", err)
 	}
@@ -2964,7 +2964,7 @@ func TestParser_SquareSquare(t *testing.T) {
 		),
 	}
 
-	parsed, err := parser.Parse(tokens)
+	parsed, err := parser.Parse()
 	if err != nil {
 		t.Errorf("Error %v", err)
 	}
@@ -3925,7 +3925,7 @@ func TestParser_SquareSquareGame(t *testing.T) {
 		),
 	}
 
-	parsed, err := parser.Parse(tokens)
+	parsed, err := parser.Parse()
 	if err != nil {
 		t.Errorf("Error %v", err)
 	}
