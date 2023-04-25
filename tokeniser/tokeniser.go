@@ -165,7 +165,7 @@ func isValidIdentifier(char rune) bool {
 
 func isKeyword(identifier string) bool {
 	keywords := []string{
-		"class", "function", "void", "return", "do", "let", "var", "int", "while", "field", "constructor", "this", "method", "true", "false", "if", "else", "boolean",
+		"class", "function", "void", "return", "do", "let", "var", "int", "while", "field", "constructor", "this", "method", "true", "false", "if", "else", "boolean", "null",
 	}
 
 	for _, keyword := range keywords {

@@ -3,7 +3,6 @@ package codegenerator
 import (
 	"fmt"
 	"liggi-go-jack-compiler/token"
-	"log"
 )
 
 type CodeGenerator struct {
@@ -12,9 +11,10 @@ type CodeGenerator struct {
 	subroutineSymbolTable *SymbolTable
 	whileStatementCount   int
 	ifStatementCount      int
+	className             string
 }
 
-type SymbolTableRow struct {
+type Symbol struct {
 	Name  string
 	Type  string
 	Kind  string
@@ -22,7 +22,25 @@ type SymbolTableRow struct {
 }
 
 type SymbolTable struct {
-	Rows []SymbolTableRow
+	Entries []Symbol
+}
+
+type SubroutineType int
+
+const (
+	Function SubroutineType = iota
+	Method
+	Constructor
+)
+
+type SubroutineDec struct {
+	name           string
+	returnType     string
+	subroutineType SubroutineType
+}
+
+type Statement struct {
+	typ string
 }
 
 func NewCodeGenerator(code []token.Node) *CodeGenerator {
@@ -33,14 +51,112 @@ func NewCodeGenerator(code []token.Node) *CodeGenerator {
 	}
 }
 
+var CharacterMap = map[rune]int{
+	' ':  32,
+	'!':  33,
+	'"':  34,
+	'#':  35,
+	'$':  36,
+	'%':  37,
+	'&':  38,
+	'\'': 39,
+	'(':  40,
+	')':  41,
+	'*':  42,
+	'+':  43,
+	',':  44,
+	'-':  45,
+	'.':  46,
+	'/':  47,
+	'0':  48,
+	'1':  49,
+	'2':  50,
+	'3':  51,
+	'4':  52,
+	'5':  53,
+	'6':  54,
+	'7':  55,
+	'8':  56,
+	'9':  57,
+	':':  58,
+	';':  59,
+	'<':  60,
+	'=':  61,
+	'>':  62,
+	'?':  63,
+	'@':  64,
+	'A':  65,
+	'B':  66,
+	'C':  67,
+	'D':  68,
+	'E':  69,
+	'F':  70,
+	'G':  71,
+	'H':  72,
+	'I':  73,
+	'J':  74,
+	'K':  75,
+	'L':  76,
+	'M':  77,
+	'N':  78,
+	'O':  79,
+	'P':  80,
+	'Q':  81,
+	'R':  82,
+	'S':  83,
+	'T':  84,
+	'U':  85,
+	'V':  86,
+	'W':  87,
+	'X':  88,
+	'Y':  89,
+	'Z':  90,
+	'[':  91,
+	'\\': 92,
+	']':  93,
+	'^':  94,
+	'_':  95,
+	'`':  96,
+	'a':  97,
+	'b':  98,
+	'c':  99,
+	'd':  100,
+	'e':  101,
+	'f':  102,
+	'g':  103,
+	'h':  104,
+	'i':  105,
+	'j':  106,
+	'k':  107,
+	'l':  108,
+	'm':  109,
+	'n':  110,
+	'o':  111,
+	'p':  112,
+	'q':  113,
+	'r':  114,
+	's':  115,
+	't':  116,
+	'u':  117,
+	'v':  118,
+	'w':  119,
+	'x':  120,
+	'y':  121,
+	'z':  122,
+	'{':  123,
+	'|':  124,
+	'}':  125,
+	'~':  126,
+}
+
 func NewSymbolTable() *SymbolTable {
 	return &SymbolTable{
-		Rows: []SymbolTableRow{},
+		Entries: []Symbol{},
 	}
 }
 
 func (s *SymbolTable) Add(name, kind, typ string) {
-	s.Rows = append(s.Rows, SymbolTableRow{
+	s.Entries = append(s.Entries, Symbol{
 		Name:  name,
 		Type:  typ,
 		Kind:  kind,
@@ -48,19 +164,19 @@ func (s *SymbolTable) Add(name, kind, typ string) {
 	})
 }
 
-func (s *SymbolTable) Get(name string) *SymbolTableRow {
-	for _, row := range s.Rows {
+func (s *SymbolTable) Get(name string) Symbol {
+	for _, row := range s.Entries {
 		if row.Name == name {
-			return &row
+			return row
 		}
 	}
 
-	return nil
+	return Symbol{}
 }
 
 func (s *SymbolTable) Count(kind string) int {
 	count := 0
-	for _, row := range s.Rows {
+	for _, row := range s.Entries {
 		if row.Kind == kind {
 			count++
 		}
@@ -70,27 +186,59 @@ func (s *SymbolTable) Count(kind string) int {
 }
 
 func (s *SymbolTable) Clear() {
-	s.Rows = []SymbolTableRow{}
+	s.Entries = []Symbol{}
 }
 
-func findElement(element *token.Element, tag string) *token.Element {
-	for _, child := range element.Children {
-		el, ok := child.(*token.Element)
-		if !ok {
-			continue
-		}
+func (s *Symbol) Push() string {
+	segment := s.Kind
 
-		if el.Tag == tag {
-			return el
-		} else {
-			found := findElement(el, tag)
-			if found != nil {
-				return found
-			}
-		}
+	if s.Kind == "field" {
+		segment = "this"
 	}
 
-	return nil
+	return fmt.Sprintf("push %s %d\n", segment, s.Index)
+}
+
+func (s *Symbol) Pop() string {
+	segment := s.Kind
+
+	if s.Kind == "field" {
+		segment = "this"
+	}
+
+	return fmt.Sprintf("pop %s %d\n", segment, s.Index)
+}
+
+func SubroutineDecFromSyntax(syntax *token.Element) (*SubroutineDec, error) {
+	var subroutineType SubroutineType
+	defKeyword := syntax.Children[0].(*token.Token).Value
+
+	switch defKeyword {
+	case "function":
+		subroutineType = Function
+	case "method":
+		subroutineType = Method
+	case "constructor":
+		subroutineType = Constructor
+	default:
+		return nil, fmt.Errorf("unknown subroutine type: %s", defKeyword)
+	}
+
+	name, err := syntax.ChildAsToken(2)
+	if err != nil {
+		return nil, err
+	}
+
+	returnType, err := syntax.ChildAsToken(1)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SubroutineDec{
+		name:           name.Value,
+		returnType:     returnType.Value,
+		subroutineType: subroutineType,
+	}, nil
 }
 
 func findChildElement(element *token.Element, tag string) *token.Element {
@@ -108,225 +256,340 @@ func findChildElement(element *token.Element, tag string) *token.Element {
 	return nil
 }
 
-func getAllChildElements(element *token.Element, tag string) []*token.Element {
-	var elements []*token.Element
+func getVarDefs(v *token.Element) ([]string, string, error) {
+	varNames := []string{}
 
-	for _, child := range element.Children {
-		el, ok := child.(*token.Element)
+	typ, err := v.ChildAsToken(1)
+	if err != nil {
+		return nil, "", err
+	}
+
+	for i := 2; i < len(v.Children); i++ {
+		if identifier, ok := v.Children[i].(*token.Token); ok {
+			// Check if the token type is "identifier" before appending
+			if identifier.TokenType == "identifier" {
+				varNames = append(varNames, identifier.Value)
+			}
+		} else {
+			return nil, "", fmt.Errorf("unexpected non-token child at index %d", i)
+		}
+	}
+
+	return varNames, typ.Value, nil
+}
+
+func isUnaryOperation(op string) bool {
+	return op == "-" || op == "~"
+}
+
+func unaryOpToCode(op string) (string, error) {
+	switch op {
+	case "-":
+		return "neg", nil
+	case "~":
+		return "not", nil
+	default:
+		return "", fmt.Errorf("unknown unary operator: %s", op)
+	}
+}
+
+func opToCode(op string) (string, error) {
+	switch op {
+	case "+":
+		return "add", nil
+	case "-":
+		return "sub", nil
+	case "*":
+		return "call Math.multiply 2", nil
+	case "/":
+		return "call Math.divide 2", nil
+	case "&":
+		return "and", nil
+	case "|":
+		return "or", nil
+	case "<":
+		return "lt", nil
+	case ">":
+		return "gt", nil
+	case "=":
+		return "eq", nil
+	default:
+		return "", fmt.Errorf("unknown operator: %s", op)
+	}
+}
+
+func (c *CodeGenerator) compileExpressionTerm(term *token.Element) (string, error) {
+	exp, err := term.ChildAsElement(1)
+	if err != nil {
+		return "", err
+	}
+
+	compiledExpression, err := c.compileExpression(exp)
+	if err != nil {
+		return "", err
+	}
+
+	return compiledExpression, nil
+}
+
+func (c *CodeGenerator) compileFunctionCallTerm(term *token.Element) (string, error) {
+	var code string
+	var numArgs int
+
+	qualifierToken, err := term.ChildAsToken(0)
+	if err != nil {
+		return "", err
+	}
+
+	qualifier := qualifierToken.Value
+	subroutineName, err := term.ChildAsToken(2)
+	if err != nil {
+		return "", err
+	}
+
+	instanceVar := c.findSymbol(qualifier)
+
+	if (instanceVar != Symbol{}) {
+		code += instanceVar.Push()
+
+		qualifier = instanceVar.Type
+		numArgs = 1
+	}
+
+	if qualifier == "" {
+		code += "push pointer 0\n"
+
+		qualifier = c.className
+		numArgs = 1
+	}
+
+	expressionList := term.FindElement("expressionList")
+	expressions := expressionList.AllChildElementsByTag("expression")
+
+	args := len(expressions)
+	compiledExpressionList, _, err := c.compileExpressionList(*expressionList)
+	if err != nil {
+		return "", err
+	}
+
+	code += compiledExpressionList
+
+	numArgs += args
+
+	code += fmt.Sprintf("call %s.%s %d\n", qualifier, subroutineName.Value, numArgs)
+
+	return code, nil
+}
+
+func (c *CodeGenerator) compileString(s string) (string, error) {
+	code := fmt.Sprintf("push constant %d\n", len(s))
+	code += "call String.new 1\n"
+
+	for _, char := range s {
+		charCode, ok := CharacterMap[char]
 		if !ok {
+			return "", fmt.Errorf("unknown character: %s", string(char))
+		}
+
+		code += fmt.Sprintf("push constant %d\n", charCode)
+		code += "call String.appendChar 2\n"
+	}
+
+	return code, nil
+}
+
+func (c *CodeGenerator) compileTerm(term *token.Element) (string, error) {
+	// If the term has an expression, we compile the expression, then return
+	if findChildElement(term, "expression") != nil {
+		return c.compileExpressionTerm(term)
+	}
+
+	// If the expression is a function call, we compile the expression list
+	// call the function, then return
+	if term.FindElement("expressionList") != nil {
+		return c.compileFunctionCallTerm(term)
+	}
+
+	token, err := term.ChildAsToken(0)
+	if err != nil {
+		return "", err
+	}
+
+	// Otherwise, it's just a simple push operation
+	switch token.TokenType {
+	case "integerConstant":
+		return "push constant " + token.Value + "\n", nil
+
+	case "stringConstant":
+		return c.compileString(token.Value)
+
+	case "keyword":
+		switch token.Value {
+		case "true":
+			return "push constant 0\nnot\n", nil
+		case "false":
+			return "push constant 0\n", nil
+		case "this":
+			return "push pointer 0\n", nil
+		case "null":
+			return "push constant 0\n", nil
+		}
+
+	case "identifier":
+		ident := c.findSymbol(token.Value)
+		return ident.Push(), nil
+	}
+
+	return "", nil
+}
+
+func (c *CodeGenerator) compileExpression(expression *token.Element) (string, error) {
+	var expressionCode string
+
+	terms := expression.AllChildElementsByTag("term")
+
+	for _, term := range terms {
+		// Is the term an array access?
+		if term.FindChildToken("symbol", "[") != nil {
+			identifier, err := term.ChildAsToken(0)
+			if err != nil {
+				return "", err
+			}
+
+			ident := c.findSymbol(identifier.Value)
+
+			arrayAccessExpression := term.FindElement("expression")
+			compiledExpression, err := c.compileExpression(arrayAccessExpression)
+			if err != nil {
+				return "", err
+			}
+
+			expressionCode += compiledExpression
+			expressionCode += ident.Push()
+			expressionCode += "add\n"
+			expressionCode += "pop pointer 1\n"
+			expressionCode += "push that 0\n"
+
 			continue
 		}
 
-		if el.Tag == tag {
-			elements = append(elements, el)
-		} else {
-			found := getAllChildElements(el, tag)
-			if found != nil {
-				elements = append(elements, found...)
-			}
-		}
-	}
-
-	return elements
-}
-
-func findToken(element *token.Element, tokenType string, value ...string) *token.Token {
-	valueToFind := ""
-
-	if len(value) > 0 {
-		valueToFind = value[0]
-	}
-
-	for _, child := range element.Children {
-		switch child := child.(type) {
-		case *token.Token:
-			if child.TokenType == tokenType && (valueToFind == "" || child.Value == valueToFind) {
-				return child
-			}
-		}
-	}
-
-	return nil
-}
-
-func getChildTokens(element *token.Element, tokenType string, value ...string) []*token.Token {
-	valueToFind := ""
-
-	if len(value) > 0 {
-		valueToFind = value[0]
-	}
-
-	var tokens []*token.Token
-
-	for _, child := range element.Children {
-		switch child := child.(type) {
-		case *token.Token:
-			if child.TokenType == tokenType && (valueToFind == "" || child.Value == valueToFind) {
-				tokens = append(tokens, child)
-			}
-		}
-	}
-
-	return tokens
-}
-
-func getChildElements(element *token.Element, tag ...string) []token.Element {
-	var children []token.Element
-
-	for _, child := range element.Children {
-		switch child := child.(type) {
-		case *token.Element:
-			if len(tag) == 0 || child.Tag == tag[0] {
-				children = append(children, *child)
-			}
-		}
-	}
-
-	return children
-}
-
-func getVarDefs(v *token.Element) ([]string, string) {
-	varNames := []string{}
-	// May have multiple identifiers, let's get them all
-	identifiers := getChildTokens(v, "identifier")
-	typ := v.Children[1].(*token.Token).Value
-
-	for _, identifier := range identifiers {
-		varNames = append(varNames, identifier.Value)
-	}
-
-	return varNames, typ
-}
-
-func (c *CodeGenerator) compileTerm(term *token.Element) string {
-	t := term.Children[0].(*token.Token)
-
-	termHasExpression := findChildElement(term, "expression") != nil
-
-	if termHasExpression {
-		return c.compileExpression(term.Children[1].(*token.Element))
-	}
-
-	switch t.TokenType {
-	case "integerConstant":
-		return "push constant " + t.Value + "\n"
-	case "keyword":
-		switch t.Value {
-		case "true":
-			return "push constant 0\nnot\n"
-		case "false":
-			return "push constant 0\n"
-		}
-	case "identifier":
-		// Might be a function call
-		openingBracket := findToken(term, "symbol", "(")
-		if openingBracket != nil {
-			// Get number of expressions
-			expressions := findElement(term, "expressionList")
-			args := len(expressions.Children)
-			// compile all the expressions!
-			code, _ := c.compileExpressionList(*expressions)
-
-			code += fmt.Sprintf("call %s.%s %d\n", t.Value, term.Children[2].(*token.Token).Value, args)
-
-			return code
-		} else {
-			ident := c.findSymbol(t.Value)
-			return "push " + ident.Kind + " " + fmt.Sprintf("%d", ident.Index) + "\n"
-		}
-
-	}
-
-	return ""
-}
-
-func (c *CodeGenerator) compileExpression(expression *token.Element) string {
-	var expressionCode string
-
-	terms := getChildElements(expression, "term")
-
-	for _, term := range terms {
 		// Is the term another expression?
-		termExpression := findChildElement(&term, "expression")
+		termExpression := term.FindChildElement("expression")
+		if termExpression != nil {
+			compiledExpression, err := c.compileExpression(termExpression)
+			if err != nil {
+				return "", err
+			}
 
-		// Is the first part of the term an op?
-		if term.Children[0].(*token.Token).Value == "-" {
-			// It's not always a term here, could also be an expression too!
-			expressionCode += c.compileTerm(term.Children[1].(*token.Element))
+			expressionCode += compiledExpression
 
-			expressionCode += "neg\n"
+			continue
 		}
 
-		if term.Children[0].(*token.Token).Value == "~" {
-			// It's not always a term here, could also be an expression too!
-			expressionCode += c.compileTerm(term.Children[1].(*token.Element))
+		// Is it a unary operation?
+		unaryOp, _ := term.ChildAsToken(0)
+		if isUnaryOperation(unaryOp.Value) {
+			termToCompile, err := term.ChildAsElement(1)
+			if err != nil {
+				return "", err
+			}
 
-			expressionCode += "not\n"
+			compiledTerm, err := c.compileTerm(termToCompile)
+			if err != nil {
+				return "", err
+			}
+
+			expressionCode += compiledTerm
+			op, err := unaryOpToCode(unaryOp.Value)
+			if err != nil {
+				return "", err
+			}
+
+			expressionCode += op + "\n"
+
+			continue
 		}
 
-		if termExpression == nil {
-			expressionCode += c.compileTerm(&term)
-		} else {
-			expressionCode += c.compileExpression(termExpression)
+		// Otherwise, it's just a regular term
+		compiledTerm, err := c.compileTerm(term)
+		if err != nil {
+			return "", err
 		}
+
+		expressionCode += compiledTerm
 	}
 
-	op := findToken(expression, "symbol")
-
+	// Handle the operation, if there is one!
+	op := expression.FindChildToken("symbol")
 	if op != nil {
-		if op.Value == "+" {
-			expressionCode += "add\n"
+		operation, err := opToCode(op.Value)
+		if err != nil {
+			return "", err
 		}
 
-		if op.Value == "-" {
-			expressionCode += "sub\n"
-		}
-
-		if op.Value == "*" {
-			expressionCode += "call Math.multiply 2\n"
-		}
-
-		if op.Value == ">" {
-			expressionCode += "gt\n"
-		}
-
-		if op.Value == "&" {
-			expressionCode += "and\n"
-		}
-
-		if op.Value == "=" {
-			expressionCode += "eq\n"
-		}
+		expressionCode += operation + "\n"
 	}
 
-	return expressionCode
+	return expressionCode, nil
 }
 
-func (c *CodeGenerator) compileStatement(statement token.Element) string {
+func (c *CodeGenerator) compileStatement(statement token.Element) (string, error) {
 	var code string
 
 	switch statement.Tag {
 	case "letStatement":
-		code += c.compileLetStatement(statement)
+		compiledLet, err := c.compileLetStatement(statement)
+		if err != nil {
+			return "", fmt.Errorf("failed compiling let statement: %w", err)
+		}
+
+		code += compiledLet
 	case "doStatement":
-		code += c.compileDoStatement(statement)
+		compiledDo, err := c.compileDoStatement(statement)
+		if err != nil {
+			return "", fmt.Errorf("failed compiling do statement: %w", err)
+		}
+
+		code += compiledDo
 	case "returnStatement":
-		code += c.compileReturnStatement(statement)
+		compiledReturn, err := c.compileReturnStatement(statement)
+		if err != nil {
+			return "", fmt.Errorf("failed compiling return statement: %w", err)
+		}
+
+		code += compiledReturn
 	case "whileStatement":
-		code += c.compileWhileStatement(statement)
+		compiledWhile, err := c.compileWhileStatement(statement)
+		if err != nil {
+			return "", fmt.Errorf("failed compiling while statement: %w", err)
+		}
+
+		code += compiledWhile
 	case "ifStatement":
-		code += c.compileIfStatement(statement)
+		compiledIf, err := c.compileIfStatement(statement)
+		if err != nil {
+			return "", fmt.Errorf("failed compiling if statement: %w", err)
+		}
+
+		code += compiledIf
 	}
 
-	return code
+	return code, nil
 }
 
-func (c *CodeGenerator) compileIfStatement(ifStatement token.Element) string {
+func (c *CodeGenerator) compileIfStatement(ifStatement token.Element) (string, error) {
 	var code string
 
 	expression := findChildElement(&ifStatement, "expression")
+	if expression == nil {
+		return "", fmt.Errorf("failed to find expression")
+	}
+
 	statementsContainer := findChildElement(&ifStatement, "statements")
-	statements := getChildElements(statementsContainer)
+	if statementsContainer == nil {
+		return "", fmt.Errorf("failed to find statements")
+	}
+	statements := statementsContainer.AllChildElements()
 
 	startLabel := fmt.Sprintf("IF_TRUE%d", c.ifStatementCount)
 	endLabel := fmt.Sprintf("IF_END%d", c.ifStatementCount)
@@ -334,45 +597,85 @@ func (c *CodeGenerator) compileIfStatement(ifStatement token.Element) string {
 
 	c.ifStatementCount++
 
-	code += c.compileExpression(expression)
+	compiledExpression, err := c.compileExpression(expression)
+	if err != nil {
+		return "", err
+	}
+	code += compiledExpression
 
-	elseKeyword := getChildTokens(&ifStatement, "keyword", "else")
+	elseKeyword := ifStatement.FindChildToken("keyword", "else")
 
-	code += fmt.Sprintf("if-goto %s\n", startLabel)
-	if len(elseKeyword) > 0 {
-		code += fmt.Sprintf("goto %s\n", elseLabel)
+	if elseKeyword == nil {
+		code += fmt.Sprintf("if-goto %s\n", startLabel)
+		code += fmt.Sprintf("goto %s\n", elseLabel) // This is confusing
+
+		code += fmt.Sprintf("label %s\n", startLabel)
+
+		for _, statement := range statements {
+			compiledStatement, err := c.compileStatement(*statement)
+			if err != nil {
+				return "", err
+			}
+
+			code += compiledStatement
+		}
+
+		code += fmt.Sprintf("label %s\n", elseLabel)
 	} else {
+		code += fmt.Sprintf("if-goto %s\n", startLabel)
+		code += fmt.Sprintf("goto %s\n", elseLabel)
+
+		code += fmt.Sprintf("label %s\n", startLabel)
+		for _, statement := range statements {
+			compiledStatement, err := c.compileStatement(*statement)
+			if err != nil {
+				return "", err
+			}
+
+			code += compiledStatement
+		}
+
 		code += fmt.Sprintf("goto %s\n", endLabel)
-	}
 
-	code += fmt.Sprintf("label %s\n", startLabel)
-	for _, statement := range statements {
-		code += c.compileStatement(statement)
-	}
-
-	code += fmt.Sprintf("goto %s\n", endLabel)
-
-	if len(elseKeyword) > 0 {
 		code += fmt.Sprintf("label %s\n", elseLabel)
 
-		elseStatementsContainer := getChildElements(&ifStatement, "statements")[1]
-		elseStatements := getChildElements(&elseStatementsContainer)
-		for _, statement := range elseStatements {
-			code += c.compileStatement(statement)
+		// TODO: Bad, make good
+		statementsBlocks := ifStatement.AllChildElementsByTag("statements")
+		if len(statementsBlocks) < 2 {
+			return "", fmt.Errorf("failed to find else statements, despite finding else keyword")
 		}
+		elseStatementsContainer := statementsBlocks[1]
+
+		elseStatements := elseStatementsContainer.AllChildElements()
+		for _, statement := range elseStatements {
+			compiledStatement, err := c.compileStatement(*statement)
+			if err != nil {
+				return "", err
+			}
+
+			code += compiledStatement
+		}
+
+		code += fmt.Sprintf("label %s\n", endLabel)
 	}
 
-	code += fmt.Sprintf("label %s\n", endLabel)
-
-	return code
+	return code, nil
 }
 
-func (c *CodeGenerator) compileWhileStatement(whileStatement token.Element) string {
+func (c *CodeGenerator) compileWhileStatement(whileStatement token.Element) (string, error) {
 	var code string
 
 	expression := findChildElement(&whileStatement, "expression")
+	if expression == nil {
+		return "", fmt.Errorf("failed to find expression")
+	}
+
 	statementsContainer := findChildElement(&whileStatement, "statements")
-	statements := getChildElements(statementsContainer)
+	if statementsContainer == nil {
+		return "", fmt.Errorf("failed to find statements")
+	}
+
+	statements := statementsContainer.AllChildElements()
 
 	startLabel := fmt.Sprintf("WHILE_EXP%d", c.whileStatementCount)
 	endLabel := fmt.Sprintf("WHILE_END%d", c.whileStatementCount)
@@ -380,208 +683,340 @@ func (c *CodeGenerator) compileWhileStatement(whileStatement token.Element) stri
 	c.whileStatementCount++
 
 	code = fmt.Sprintf("label %s\n", startLabel)
-	code += c.compileExpression(expression)
+
+	compiledExpression, err := c.compileExpression(expression)
+	if err != nil {
+		return "", err
+	}
+	code += compiledExpression
 	code += "not\n"
 	code += fmt.Sprintf("if-goto %s\n", endLabel)
 	for _, statement := range statements {
-		code += c.compileStatement(statement)
+		compiledStatement, err := c.compileStatement(*statement)
+		if err != nil {
+			return "", err
+		}
+
+		code += compiledStatement
 	}
 
 	code += fmt.Sprintf("goto %s\n", startLabel)
 	code += fmt.Sprintf("label %s\n", endLabel)
 
-	return code
+	return code, nil
 }
 
-func (c *CodeGenerator) compileLetStatement(letStatement token.Element) string {
+func (c *CodeGenerator) compileLetStatement(letStatement token.Element) (string, error) {
 	var code string
 
-	identifier := findToken(&letStatement, "identifier")
+	hasLeftHandArrayAssignment := letStatement.FindChildToken("symbol", "[") != nil
+
+	identifier := letStatement.FindChildToken("identifier")
 	if identifier == nil {
-		log.Fatalf("Expected identifier")
+		return "", fmt.Errorf("expected identifier")
 	}
 
-	expression := findElement(&letStatement, "expression")
-	if expression == nil {
-		log.Fatalf("Expected expression")
+	var assignmentExpression *token.Element
+
+	if hasLeftHandArrayAssignment {
+		assignmentExpression = letStatement.AllChildElementsByTag("expression")[1]
+	} else {
+		assignmentExpression = letStatement.FindChildElement("expression")
 	}
 
-	code += c.compileExpression(expression)
+	if assignmentExpression == nil {
+		return "", fmt.Errorf("expected assignment expression")
+	}
+
+	compiledAssignmentExpression, err := c.compileExpression(assignmentExpression)
+	if err != nil {
+		return "", err
+	}
 
 	symbol := c.findSymbol(identifier.Value)
-
-	if symbol == nil {
-		log.Fatalf("Symbol not found")
+	if (symbol == Symbol{}) {
+		return "", fmt.Errorf("symbol (%s) not found", identifier.Value)
 	}
 
-	code += fmt.Sprintf("pop %s %d\n", symbol.Kind, symbol.Index)
+	if hasLeftHandArrayAssignment {
 
-	return code
+		arrayExpression := letStatement.AllChildElementsByTag("expression")[0]
+		compiledArrayExpression, err := c.compileExpression(arrayExpression)
+		if err != nil {
+			return "", fmt.Errorf("failed compiling array assignment expression: %w", err)
+		}
+
+		code += compiledArrayExpression
+		code += symbol.Push()
+		code += "add\n"
+	}
+
+	code += compiledAssignmentExpression
+
+	if hasLeftHandArrayAssignment {
+		code += "pop temp 0\n"
+
+		code += "pop pointer 1\n"
+		code += "push temp 0\n"
+		code += "pop that 0\n"
+
+		return code, nil
+	}
+
+	code += symbol.Pop()
+
+	return code, nil
 }
 
-func getDoStatement(doStatement token.Element) (string, string) {
-	// Get the class or object name
-	obj := doStatement.Children[1].(*token.Token).Value
+func getDoStatement(doStatement token.Element) (string, string, error) {
+	hasQualifier := doStatement.FindChildToken("symbol", ".") != nil
 
-	// Get the subroutine name
-	subroutineName := doStatement.Children[3].(*token.Token).Value
+	if !hasQualifier {
+		subroutineName, err := doStatement.ChildAsToken(1)
+		if err != nil {
+			return "", "", err
+		}
 
-	return obj, subroutineName
+		return "", subroutineName.Value, nil
+	}
+
+	qualifier, err := doStatement.ChildAsToken(1)
+	if err != nil {
+		return "", "", err
+	}
+
+	subroutineName, err := doStatement.ChildAsToken(3)
+	if err != nil {
+		return "", "", err
+	}
+
+	return qualifier.Value, subroutineName.Value, nil
 }
 
-func (c *CodeGenerator) findSymbol(obj string) *SymbolTableRow {
+func (c *CodeGenerator) findSymbol(obj string) Symbol {
 	// Find the symbol in the symbol table
 	symbol := c.subroutineSymbolTable.Get(obj)
-	if symbol == nil {
+	if (symbol == Symbol{}) {
 		symbol = c.classSymbolTable.Get(obj)
 	}
 
 	return symbol
 }
 
-func (c *CodeGenerator) compileExpressionList(expressionList token.Element) (string, int) {
-	var code string
-
-	expressions := getChildElements(&expressionList, "expression")
-
-	for _, expression := range expressions {
-		code += c.compileExpression(&expression)
+func (c *CodeGenerator) compileExpressionList(expressionList token.Element) (string, int, error) {
+	expressions := expressionList.AllChildElementsByTag("expression")
+	if len(expressions) == 0 {
+		return "", 0, nil
 	}
 
-	return code, len(expressions)
+	var code string
+
+	for _, expression := range expressions {
+		compiledExpression, err := c.compileExpression(expression)
+		if err != nil {
+			return "", 0, err
+		}
+
+		code += compiledExpression
+	}
+
+	return code, len(expressions), nil
 }
 
-func (c *CodeGenerator) compileDoStatement(doStatement token.Element) string {
-	code, argCount := c.compileExpressionList(*findElement(&doStatement, "expressionList"))
+func (c *CodeGenerator) compileDoStatement(doStatement token.Element) (string, error) {
+	var code string
+	var numArgs int
 
-	qualifier, subroutine := getDoStatement(doStatement)
+	qualifier, subroutine, err := getDoStatement(doStatement)
+	if err != nil {
+		return "", err
+	}
 
 	instanceVar := c.findSymbol(qualifier)
 
-	if instanceVar != nil {
-		code += fmt.Sprintf("push %s %d\n", instanceVar.Kind, instanceVar.Index)
+	if (instanceVar != Symbol{}) {
+		code += instanceVar.Push()
+
 		qualifier = instanceVar.Type
-		argCount++
+		numArgs = 1
 	}
 
-	code += fmt.Sprintf("call %s.%s %d\n", qualifier, subroutine, argCount)
+	if qualifier == "" {
+		code += "push pointer 0\n"
+
+		qualifier = c.className
+		numArgs = 1
+	}
+
+	expressionList := doStatement.FindChildElement("expressionList")
+
+	compiledExpressionList, argCount, err := c.compileExpressionList(*expressionList)
+	if err != nil {
+		return "", err
+	}
+
+	code += compiledExpressionList
+
+	numArgs += argCount
+
+	code += fmt.Sprintf("call %s.%s %d\n", qualifier, subroutine, numArgs)
 
 	// Do statements don't have a return value, so just dump it
 	code += "pop temp 0\n"
 
-	return code
+	return code, nil
 }
 
-func (c *CodeGenerator) compileReturnStatement(returnStatement token.Element) string {
+func (c *CodeGenerator) compileReturnStatement(returnStatement token.Element) (string, error) {
 	var code string
 
-	expression := findElement(&returnStatement, "expression")
+	expression := returnStatement.FindElement("expression")
 
 	if expression == nil {
 		// Handle an empty return
 		code += "push constant 0\n"
 	} else {
-		code += c.compileExpression(expression)
+		compiledExpression, err := c.compileExpression(expression)
+		if err != nil {
+			return "", err
+		}
+
+		code += compiledExpression
 	}
 
 	code += "return\n"
 
-	return code
+	return code, nil
 }
 
-func (c *CodeGenerator) compileVarDecs(varDecs []*token.Element) int {
-	var count int
+func (c *CodeGenerator) initialiseParameterList(dec *token.Element, symbolTable *SymbolTable, isMethod bool) {
+	// Get the parameter list
+	parameterList := dec.FindElement("parameterList")
 
-	for _, varDec := range varDecs {
-		// Get all the identifiers
-		typ := varDec.Children[1].(*token.Token).Value
-		identifiers := getChildTokens(varDec, "identifier")
+	typesAndIdentifiers := []token.Token{}
 
-		for _, identifier := range identifiers {
-			// Add the identifier to the symbol table
-			count++
-			c.subroutineSymbolTable.Add(identifier.Value, typ, "local")
+	for _, child := range parameterList.AllChildTokens() {
+		if child.TokenType == "keyword" || child.TokenType == "identifier" {
+			typesAndIdentifiers = append(typesAndIdentifiers, *child)
 		}
 	}
 
-	return count
-}
+	if isMethod {
+		symbolTable.Add("__placeholder_for_this__", "argument", c.className)
+	}
 
-func (c *CodeGenerator) initialiseParameterList(dec *token.Element, symbolTable *SymbolTable) {
-	// Get the parameter list
-	parameterList := findElement(dec, "parameterList")
-
-	// Get all the identifiers
-	identifiers := getChildTokens(parameterList, "identifier")
-
-	// Get all the types
-	types := getChildTokens(parameterList, "keyword")
-
-	// Add all the parameters to the symbol table
-	for i, identifier := range identifiers {
-		symbolTable.Add(identifier.Value, "argument", types[i].Value)
+	for i := 0; i < len(typesAndIdentifiers); i += 2 {
+		symbolTable.Add(typesAndIdentifiers[i+1].Value, "argument", typesAndIdentifiers[i].Value)
 	}
 }
 
-func (c *CodeGenerator) compileSubroutine(class, dec *token.Element) string {
-	numLocalVars := c.initSymbolTable(
+func (c *CodeGenerator) compileSubroutine(class, dec *token.Element) (string, error) {
+	numLocalVars, err := c.initSymbolTable(
 		c.subroutineSymbolTable,
-		getAllChildElements(dec, "varDec"),
-		"local",
+		dec.FindChildElement("subroutineBody").AllChildElementsByTag("varDec"),
 	)
+	if err != nil {
+		return "", fmt.Errorf("error initialising local symbol table for subroutine: %w", err)
+	}
 
-	c.initialiseParameterList(dec, c.subroutineSymbolTable)
+	subroutine, err := SubroutineDecFromSyntax(dec)
+	if err != nil {
+		return "", err
+	}
+
+	c.initialiseParameterList(dec, c.subroutineSymbolTable, subroutine.subroutineType == Method)
 
 	c.whileStatementCount = 0
 	c.ifStatementCount = 0
 
-	className := findToken(class, "identifier").Value
-	funcName := findToken(dec, "identifier").Value
+	className := class.FindChildToken("identifier").Value
+	funcName := subroutine.name
 
 	code := fmt.Sprintf("function %s.%s %d\n", className, funcName, numLocalVars)
 
-	statementsContainer := findElement(dec, "statements")
-	statements := getChildElements(statementsContainer)
-	for _, statement := range statements {
-		code += c.compileStatement(statement)
+	if subroutine.subroutineType == Constructor {
+		// If it's a constructor, allocate memory for the object
+		code += fmt.Sprintf("push constant %d\n", c.classSymbolTable.Count("field"))
+		code += "call Memory.alloc 1\n"
+		code += "pop pointer 0\n"
+	} else if subroutine.subroutineType == Method {
+		// If it's a method, set the first argument to the object
+		code += "push argument 0\n"
+		code += "pop pointer 0\n"
 	}
 
-	return code
+	statementsContainer := dec.FindElement("statements")
+	statements := statementsContainer.AllChildElements()
+	for _, statement := range statements {
+		compiledStatement, err := c.compileStatement(*statement)
+		if err != nil {
+			return "", fmt.Errorf("error compiling subroutine (%s): %w", funcName, err)
+		}
+
+		code += compiledStatement
+	}
+
+	return code, nil
 }
 
-func (c *CodeGenerator) compileClass(class *token.Element) string {
+func (c *CodeGenerator) compileClass(class *token.Element) (string, error) {
 	var code string
 
-	c.initSymbolTable(
-		c.classSymbolTable,
-		getAllChildElements(class, "classVarDec"),
-		"field",
-	)
+	c.className = class.FindChildToken("identifier").Value
 
-	subroutineDecs := getChildElements(class, "subroutineDec")
-	for _, subroutineDec := range subroutineDecs {
-		code += c.compileSubroutine(class, &subroutineDec)
+	_, err := c.initSymbolTable(
+		c.classSymbolTable,
+		class.AllChildElementsByTag("classVarDec"),
+	)
+	if err != nil {
+		return "", fmt.Errorf("error initialising class symbol table: %w", err)
 	}
 
-	return code
+	subroutineDecs := class.AllChildElementsByTag("subroutineDec")
+	for _, subroutineDec := range subroutineDecs {
+		compiledSubroutine, err := c.compileSubroutine(class, subroutineDec)
+		if err != nil {
+			return "", err
+		}
+		code += compiledSubroutine
+	}
+
+	return code, nil
 }
 
-func (c *CodeGenerator) initSymbolTable(s *SymbolTable, vars []*token.Element, kind string) int {
+func (c *CodeGenerator) initSymbolTable(s *SymbolTable, vars []*token.Element) (int, error) {
 	count := 0
 	s.Clear()
 
 	for _, v := range vars {
-		idents, typ := getVarDefs(v)
+		// Get the kind of variable
+		var kind string
+		decLabel, err := v.ChildAsToken(0)
+		if err != nil {
+			return 0, fmt.Errorf("no valid kind found for variable: %w", err)
+		}
+
+		if decLabel.Value == "var" {
+			kind = "local"
+		} else {
+			kind = decLabel.Value
+		}
+
+		idents, typ, err := getVarDefs(v)
+		if err != nil {
+			return 0, err
+		}
+
 		for _, i := range idents {
 			count++
 			s.Add(i, kind, typ)
 		}
 	}
 
-	return count
+	return count, nil
 }
 
-func (c *CodeGenerator) Generate() string {
+func (c *CodeGenerator) Generate() (string, error) {
 	var code string
 
 	for _, child := range c.code {
@@ -590,15 +1025,15 @@ func (c *CodeGenerator) Generate() string {
 			element := child
 			switch element.Tag {
 			case "class":
-				code += c.compileClass(child)
+				compiledClass, err := c.compileClass(child)
+				if err != nil {
+					return "", fmt.Errorf("error compiling class: %w", err)
+				}
+
+				code += compiledClass
 			}
 		}
 	}
 
-	// Strip any trailing \n if there is one
-	if len(code) > 0 && code[len(code)-1] == '\n' {
-		code = code[:len(code)-1]
-	}
-
-	return code
+	return code, nil
 }
